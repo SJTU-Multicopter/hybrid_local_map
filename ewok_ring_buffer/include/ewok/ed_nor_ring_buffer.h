@@ -63,7 +63,7 @@ class EuclideanDistanceNormalRingBuffer
         if(objects_updated)
         {
             std::vector<pcl::PointXYZI, Eigen::aligned_allocator<pcl::PointXYZI>> points = cloud_label.points;
-        
+       
             // add label and posibility
             for(int i = 0; i < int(points.size()); ++i)
             //for(int i = 0; i < cloud_label.points.size(); ++i)
@@ -87,20 +87,20 @@ class EuclideanDistanceNormalRingBuffer
                     }
                     else  // A different label comes
                     {
-                        if(label_temp == 1 && semantic_label_.at(idx) > 1) // 1: ordinary obstacle, reduce possibility
+                        if(label_temp == 3 && semantic_label_.at(idx) > 3) // 3: ordinary obstacle, reduce possibility
                         {
                             if(label_possibility_.at(idx) > 1) 
                                 label_possibility_.at(idx) -= 1; // decay by time
 
                             if(label_possibility_.at(idx) <= 1)
                             {
-                                semantic_label_.at(idx) = 1;
+                                semantic_label_.at(idx) = 3; // 3: ordinary obstacle
                                 label_possibility_.at(idx) = 2;
                             }
                         }
-                        else if(label_temp == 1 && semantic_label_.at(idx) == 0) // Original value is 0, set as ordinary obstacle
+                        else if(label_temp == 3 && semantic_label_.at(idx) < 3) // Original value is 0, free space is 2, set as ordinary obstacle: 3
                         {
-                            semantic_label_.at(idx) = 1;
+                            semantic_label_.at(idx) = 3;
                             label_possibility_.at(idx) = 2;
                         }
                         else 
@@ -263,10 +263,19 @@ class EuclideanDistanceNormalRingBuffer
                         pclp.x = p(0);
                         pclp.y = p(1);
                         pclp.z = p(2);
-                        pclp.intensity = semantic_label_.at(coord);
+
+                        if(semantic_label_.at(coord) > 3.f)
+                            pclp.intensity = semantic_label_.at(coord);
+                        else
+                            pclp.intensity = 3.f; //Ordernary obstacle
 
                         cloud.points.push_back(pclp);
                         //if(pclp.intensity > 1.1) std::cout << "person\t";
+                    }
+                    else if(occupancy_buffer_.isFree(coord)) //Free space semantic label should be eliminated
+                    {
+                        semantic_label_.at(coord) = 2; //Free space
+                        label_possibility_.at(coord) = 2;
                     }
                 }
             }

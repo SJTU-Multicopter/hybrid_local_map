@@ -61,17 +61,17 @@ void objectsCallback(const object_msgs::ObjectsInBoxes& objects)
         {
             unsigned char label;
             if(objects.objects_vector[m].object.object_name == "person")
-                label = 3;
+                label = 5;
             else if(objects.objects_vector[m].object.object_name == "tvmonitor")
-                label = 2;
+                label = 4;
             else if(objects.objects_vector[m].object.object_name == "chair")
-                label = 2;
+                label = 4;
             else if(objects.objects_vector[m].object.object_name == "diningtable")
-                label = 2;
+                label = 4;
             else if(objects.objects_vector[m].object.object_name == "sofa")
-                label = 2;
+                label = 4;
             else
-                label = 1;
+                label = 3;
 
             while(label_mat_locked)
             {
@@ -198,14 +198,14 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
     sor.filter(*cloud_filtered);
 
     // down-sample for semantic cloud CHG
-    // pcl::PointCloud<pcl::PointXYZI> semantic_cloud_filtered_body;
-    // //pcl::PointCloud<pcl::PointXYZI>::Ptr semantic_cloud_filtered(new pcl::PointCloud<pcl::PointXYZI>); //The filtered cloud with semantic labels
-    // pcl::PointCloud<pcl::PointXYZI>::Ptr semantic_cloud_filtered = semantic_cloud_filtered_body.makeShared();
+    // pcl::PointCloud<pcl::PointXYZI> semantic_cloud_filtered;
+    // // //pcl::PointCloud<pcl::PointXYZI>::Ptr semantic_cloud_filtered(new pcl::PointCloud<pcl::PointXYZI>); //The filtered cloud with semantic labels
+    // // pcl::PointCloud<pcl::PointXYZI>::Ptr semantic_cloud_filtered = semantic_cloud_filtered_body.makeShared();
 
     // pcl::VoxelGrid<pcl::PointXYZI> sor2;
     // sor2.setInputCloud(semantic_cloud);
     // sor2.setLeafSize(res, res, res);
-    // sor2.filter(*semantic_cloud_filtered);
+    // sor2.filter(semantic_cloud_filtered);
 
     // compute ewol pointcloud and origin
     Eigen::Vector3f origin = (transform * Eigen::Vector4f(0, 0, 0, 1)).head<3>();
