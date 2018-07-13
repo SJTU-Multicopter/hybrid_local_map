@@ -13,12 +13,18 @@
 #include <geometry_msgs/PointStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <std_msgs/Float64MultiArray.h>
 
 #include <pcl/common/transforms.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/io/pcd_io.h>
 #include "/home/clarence/catkin_ws/devel/include/object_msgs/ObjectsInBoxes.h"
+#include <iostream>
+#include <string>
+#include <fstream>
+
 
 using namespace message_filters;
 using namespace std;
@@ -28,19 +34,65 @@ ros::Time _last_time;
 
 bool initialized = false;
 const double resolution = 0.1;
-static const int POW = 6;
+
+static const int POW = 7;
 static const int N = (1 << POW);
+static const int IMGWIDTH = 640; // !!!! CHG NOTE
+static const int IMGHEIGHT = 480;
+static const bool save_pcds = true;
+static const string save_path = "/home/clarence/workspace/PointCloud/Gazebo_PCD_Training_data/";
+
 ewok::EuclideanDistanceNormalRingBuffer<POW>::Ptr rrb;
 
 ros::Publisher occ_marker_pub, free_marker_pub, dist_marker_pub, norm_marker_pub;
 ros::Publisher cloud2_pub, cloud_fs_pub, cloud_semantic_pub, center_pub, traj_pub;
 
 bool objects_updated = false;
-static const int IMGWIDTH = 672;
-static const int IMGHEIGHT = 376;
+
+
 
 unsigned char senantic_labels[IMGWIDTH][IMGHEIGHT];
 bool label_mat_locked = false;
+double direction_x = 1.0;
+double direction_y = 0.0;
+int control_label = 0;
+int save_counter = 0;
+
+//CHG
+void directionCallback(const std_msgs::Float64MultiArray& direction)
+{
+    direction_x = direction.data[0];
+    direction_y = direction.data[1];
+}
+
+//CHG
+void keyboardCallback(const geometry_msgs::Twist& msg)
+{
+    if(msg.linear.x > 0.f)
+    {
+        control_label = 1; // Move forward
+    }
+    else if(msg.linear.z > 0.f)
+    {
+        control_label = 2; // Move upward
+    }
+    else if(msg.linear.z < -0.f)
+    {
+        control_label = 3; // Move downward
+    }
+    else if(msg.angular.z > 0.f)
+    {
+        control_label = 4;  // Turn left
+    }
+    else if(msg.angular.z < 0.f)
+    {
+        control_label = 5;  // Turn right
+    }
+    else
+    {
+        control_label = 0;  // Hover
+    }
+}
 
 //CHG
 void objectsCallback(const object_msgs::ObjectsInBoxes& objects)
@@ -141,6 +193,7 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_in(new pcl::PointCloud<pcl::PointXYZRGB>());
     pcl::fromROSMsg(*cloud, *cloud_in);
 
+    cout<<"data converted!"<<endl;
 
     // transform to world frame
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_2(new pcl::PointCloud<pcl::PointXYZRGB>());
@@ -157,22 +210,7 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
     {
         ros::Duration(0.001).sleep(); // Sleep one second to wait for others using the label matirx
     }
-
     label_mat_locked = true;
-
-    // for(int i = 0; i < cloud_2->width; i++)
-    // {
-    //     for(int j = 0; j < cloud_2->height; j++)
-    //     {
-    //         pcl::PointXYZI temp_p;
-    //         temp_p.x = cloud_2->points[i + j * IMGWIDTH].x;
-    //         temp_p.y = cloud_2->points[i + j * IMGWIDTH].y;
-    //         temp_p.z = cloud_2->points[i + j * IMGWIDTH].z;
-    //         temp_p.intensity = senantic_labels[i][j]; //set intensity as samantic label
-    //         semantic_cloud->points.push_back(temp_p);
-    //     }
-    // }
-    // label_mat_locked = false;
 
     for(int i = 0; i < cloud_2->width; i++)
     {
@@ -296,7 +334,7 @@ void timerCallback(const ros::TimerEvent& e)
     /* Semantic cloud */
     pcl::PointCloud<pcl::PointXYZI> semantic_cloud;
     Eigen::Vector3d center_s;
-    rrb->getBufferSemanticCloud(semantic_cloud, center_s);
+    rrb->getBufferSemanticCloud(semantic_cloud, center_s, direction_x, direction_y);
 
     // convert to ROS message and publish
     sensor_msgs::PointCloud2 cloud2_semantic;
@@ -315,6 +353,31 @@ void timerCallback(const ros::TimerEvent& e)
     center_p.point.y = center_fs(1);
     center_p.point.z = center_fs(2);
     center_pub.publish(center_p);
+
+     /* Write */
+    if(save_pcds)
+    {       
+        string pcd_name = save_path + to_string(save_counter) + ".pcd";
+        string file_name = save_path + "labels.txt";
+
+        pcl::PCDWriter writer;
+        semantic_cloud.width = semantic_cloud.points.size ();
+        semantic_cloud.height = 1;
+        writer.write(pcd_name, semantic_cloud);
+
+        ofstream label_of;
+
+        label_of.open(file_name, std::ios::out | std::ios::app);  
+        if (label_of.is_open())
+        {
+            string content = to_string(save_counter)+"\t"+ to_string(center_p.point.x) + "\t" + to_string(center_p.point.y) + "\t" + to_string(center_p.point.z)+ "\t" + to_string(control_label)+"\n";
+            label_of << content;
+            label_of.close();
+        }
+
+        save_counter ++;
+    }
+
 }
 
 int main(int argc, char** argv)
@@ -329,17 +392,25 @@ int main(int argc, char** argv)
     center_pub = nh.advertise<geometry_msgs::PointStamped>("ring_buffer/center",1,true) ;
 
     // synchronized subscriber for pointcloud and odometry
-    message_filters::Subscriber<nav_msgs::Odometry> odom_sub(nh, "/zed/odom", 1);
-    message_filters::Subscriber<sensor_msgs::PointCloud2> pcl_sub(nh, "/zed/point_cloud/cloud_registered", 1);
+    // message_filters::Subscriber<nav_msgs::Odometry> odom_sub(nh, "/zed/odom", 1);
+    // message_filters::Subscriber<sensor_msgs::PointCloud2> pcl_sub(nh, "/zed/point_cloud/cloud_registered", 1);
+
+    message_filters::Subscriber<nav_msgs::Odometry> odom_sub(nh, "/firefly/ground_truth/odometry", 1);
+    message_filters::Subscriber<sensor_msgs::PointCloud2> pcl_sub(nh, "/firefly/vi_sensor/camera_depth/depth/points", 1);
+
     typedef sync_policies::ApproximateTime<nav_msgs::Odometry, sensor_msgs::PointCloud2> MySyncPolicy;
     Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), odom_sub, pcl_sub);
     sync.registerCallback(boost::bind(&odomCloudCallback, _1, _2));
 
     // subscribe RGB image detection result. Delay is ignored!!! CHG
-    ros::Subscriber detection_result = nh.subscribe("/objects", 2, objectsCallback);
+    ros::Subscriber detection_sub = nh.subscribe("/objects", 2, objectsCallback);
+    ros::Subscriber direction_sub =  nh.subscribe("/firefly/s_vec_init", 2, directionCallback);
+    ros::Subscriber keyboard_sub =  nh.subscribe("/keyboard/twist", 2, keyboardCallback);
+
+    
 
     // timer for publish ringbuffer as pointcloud
-    ros::Timer timer1 = nh.createTimer(ros::Duration(1.0), timerCallback);
+    ros::Timer timer1 = nh.createTimer(ros::Duration(1.0), timerCallback); // RATE
 
     ros::Duration(0.5).sleep();
 
