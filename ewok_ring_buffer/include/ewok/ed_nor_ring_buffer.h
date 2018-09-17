@@ -232,7 +232,7 @@ class EuclideanDistanceNormalRingBuffer
     }
 
     // get semantic ring buffer. intensity is samantic label
-    void getBufferSemanticCloud(pcl::PointCloud<pcl::PointXYZI> &cloud, Eigen::Vector3d &center)
+    void getBufferSemanticCloud(pcl::PointCloud<pcl::PointXYZI> &cloud, Eigen::Vector3d &center, double dir_x, double dir_y)
     {
         // get center of ring buffer
         Vector3i c_idx = getVolumeCenter();
@@ -274,15 +274,43 @@ class EuclideanDistanceNormalRingBuffer
                     }
                     else if(occupancy_buffer_.isFree(coord)) //Free space semantic label should be eliminated
                     {
-                        semantic_label_.at(coord) = 2; //Free space
-                        label_possibility_.at(coord) = 2;
+                        Vector3 p;
+                        getPoint(coord, p);
+
+                        pcl::PointXYZI pclp;
+                        pclp.x = p(0);
+                        pclp.y = p(1);
+                        pclp.z = p(2);
+
+                        // Consider x, y plain for fly direction
+                        double temp_x = pclp.x - center(0);
+                        double temp_y = pclp.y - center(1);
+
+                        double temp_len = sqrt(temp_x * temp_x + temp_y * temp_y);
+                        double x_norm = temp_x / temp_len;
+                        double y_norm = temp_y / temp_len;
+
+                        if(x_norm * dir_x + y_norm * dir_y > 0.8)
+                        {
+                            semantic_label_.at(coord) = 1; //Free space target
+                            label_possibility_.at(coord) = 2;
+                            pclp.intensity = 1;
+                        }
+                        else
+                        {
+                            semantic_label_.at(coord) = 2; //Free space
+                            label_possibility_.at(coord) = 2;
+                            pclp.intensity = 2;
+                        }
+                    
+                        cloud.points.push_back(pclp);
                     }
                 }
             }
         }
     }
 
-    // get ringbuffer free sapce pointcloud
+    // get ringbuffer free space pointcloud
     void getBufferFSCloud(pcl::PointCloud<pcl::PointXYZ> &cloud, Eigen::Vector3d &center)
     {
         // get center of ring buffer

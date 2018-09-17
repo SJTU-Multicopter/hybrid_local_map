@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/clarence/git/ring_buffer/secure_flying/cmake-build-debug/devel/setup.sh

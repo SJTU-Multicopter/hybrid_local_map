@@ -1,0 +1,8 @@
+prefix=/home/clarence/git/ring_buffer/ewok_ring_buffer/cmake-build-debug/devel
+
+Name: ewok_ring_buffer
+Description: Description of ewok_ring_buffer
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/clarence/git/ring_buffer/ewok_ring_buffer/cmake-build-debug/devel/lib 
+Requires: 

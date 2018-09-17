@@ -28,6 +28,7 @@
 #include <ewok/ring_buffer_base.h>
 
 #include <vector>
+#include <iostream>
 
 namespace ewok {
 
@@ -53,12 +54,12 @@ class RaycastRingBuffer {
   static constexpr double hit = 0.85;
   static constexpr double miss = -0.4;
 
-  static constexpr _Datatype datatype_max = std::numeric_limits<_Datatype>::max();
-  static constexpr _Datatype datatype_min = std::numeric_limits<_Datatype>::min();
+  static constexpr _Datatype datatype_max = std::numeric_limits<_Datatype>::max(); // 32767
+  static constexpr _Datatype datatype_min = std::numeric_limits<_Datatype>::min();  // minimum(not lowest), positive
 
-  static constexpr double datatype_range = static_cast<double>(datatype_max) - static_cast<double>(datatype_min);
+  static constexpr double datatype_range = static_cast<double>(datatype_max) - static_cast<double>(datatype_min); // datatype_range: 65535
 
-  static constexpr _Datatype datatype_hit = hit * datatype_range/(max_val - min_val);
+  static constexpr _Datatype datatype_hit = hit * datatype_range/(max_val - min_val); //10128
   static constexpr _Datatype datatype_miss = miss * datatype_range/(max_val - min_val);
 
 
@@ -119,11 +120,11 @@ class RaycastRingBuffer {
       return;
     }
 
-    Vector3i min_idx = origin_idx;
+    Vector3i min_idx = origin_idx; // 3 channels index
     Vector3i max_idx = origin_idx;
 
     // Iterate over all points in pointcloud and mark occupied.
-    // If a point is outside the volume - compute closes point in volume
+    // If a point is outside the volume - compute closest point in volume
     // and mark for inserting a free ray
     for (const Vector4 &vec : cloud) {
       Vector3 v = vec.template head<3>();
@@ -131,16 +132,16 @@ class RaycastRingBuffer {
       occupancy_buffer_.getIdx(v, idx);
 
       if (occupancy_buffer_.insideVolume(idx)) {
-        flag_buffer_.at(idx) |= occupied_flag;
+        flag_buffer_.at(idx) |= occupied_flag; // 0001
 
       } else {
         Vector3 p;
         closestPointInVolume(v, origin, p);
         occupancy_buffer_.getIdx(p, idx);
-        flag_buffer_.at(idx) |= free_ray_flag;
+        flag_buffer_.at(idx) |= free_ray_flag; // 0010
       }
 
-      min_idx = min_idx.array().min(idx.array());
+      min_idx = min_idx.array().min(idx.array()); // ???
       max_idx = max_idx.array().max(idx.array());
     }
 
@@ -166,7 +167,7 @@ class RaycastRingBuffer {
 
           Vector3i idx(x, y, z);
 
-          if (flag_buffer_.at(idx) & occupied_flag) {
+          if (flag_buffer_.at(idx) & occupied_flag) {  // if is occupied
 
             _Datatype & occupancy_data = occupancy_buffer_.at(idx);
 
@@ -269,11 +270,13 @@ class RaycastRingBuffer {
 
  protected:
 
-  static inline void addHit(_Datatype & d) {
+  static inline void addHit(_Datatype & d) { // TODO: add a function like this and use to semantic obstacles, chg
     int occ = d;
     occ += datatype_hit;
     if(occ > datatype_max) occ = datatype_max;
     d = occ;
+
+    //std::cout<<"datatype_hit:" << datatype_hit << " datatype_range:" << datatype_range << " datatype_max:" << datatype_max << std::endl;
   }
 
   static inline void addMiss(_Datatype & d) {
@@ -291,7 +294,7 @@ class RaycastRingBuffer {
     return d < datatype_miss;
   }
 
-  void closestPointInVolume(const Vector3 &point,
+  void closestPointInVolume(const Vector3 &point,  
                            const Vector3 &origin,
                            Vector3 &res) {
     Vector3 diff = point - origin;
