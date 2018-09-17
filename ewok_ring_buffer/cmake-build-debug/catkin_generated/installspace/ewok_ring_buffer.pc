@@ -1,8 +1,0 @@
-prefix=/usr/local
-
-Name: ewok_ring_buffer
-Description: Description of ewok_ring_buffer
-Version: 0.0.0
-Cflags: 
-Libs: -L/usr/local/lib 
-Requires: 

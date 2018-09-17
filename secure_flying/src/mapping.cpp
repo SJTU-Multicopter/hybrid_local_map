@@ -203,20 +203,10 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
     pcl::transformPointCloud(*cloud_in, *cloud_1, t_c_b);
     pcl::transformPointCloud(*cloud_1, *cloud_2, transform);
 
-    // down-sample
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>());
-    pcl::VoxelGrid<pcl::PointXYZRGB> sor;
-    sor.setInputCloud(cloud_2);
-    float res = 0.1f;
-    sor.setLeafSize(res, res, res);
-    sor.filter(*cloud_filtered);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_dynamic(new pcl::PointCloud<pcl::PointXYZRGB>()); //chg, for dynamic objects
 
+    // add semantic label, chg
 
-    // CHG: Match Cloud Position and RBG IMG here and turn to pcl::PointXYZI !!!
-    pcl::PointCloud<pcl::PointXYZI> semantic_cloud_body; 
-    //pcl::PointCloud<pcl::PointXYZI>::Ptr semantic_cloud (new pcl::PointCloud<pcl::PointXYZI>);
-    // pcl::PointCloud<pcl::PointXYZI>::Ptr semantic_cloud = semantic_cloud_body.makeShared();
-    
     while(label_mat_locked)
     {
         ros::Duration(0.00001).sleep(); // Sleep to wait for others using the label matrix
@@ -227,26 +217,61 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
     {
         for(int j = 0; j < cloud_2->height; j++)
         {
-            pcl::PointXYZI temp_p;
-            temp_p.x = cloud_2->points[i + j * IMGWIDTH].x;
-            temp_p.y = cloud_2->points[i + j * IMGWIDTH].y;
-            temp_p.z = cloud_2->points[i + j * IMGWIDTH].z;
-            temp_p.intensity = senantic_labels[i][j]; //set intensity as samantic label
-            semantic_cloud_body.points.push_back(temp_p);
+            cloud_2->points[i + j * IMGWIDTH].rgb = senantic_labels[i][j];
+            if(senantic_labels[i][j] == 5)  // Record dynamic obstacles: man 5
+            {
+                pcl::PointXYZRGB temp;
+                temp.x = cloud_2->points[i + j * IMGWIDTH].x;
+                temp.y = cloud_2->points[i + j * IMGWIDTH].y;
+                temp.z = cloud_2->points[i + j * IMGWIDTH].z;
+                temp.rgb = 0.f;
+                cloud_dynamic->push_back(temp);
+            }
         }
     }
     label_mat_locked = false;
+
+    // down-sample for all
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>());
+    pcl::VoxelGrid<pcl::PointXYZRGB> sor;
+    sor.setInputCloud(cloud_2);
+    float res = 0.1f;
+    sor.setLeafSize(res, res, res);
+    sor.filter(*cloud_filtered);
+
+    // down-sample for dynamic objects, chg
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered_dynamic(new pcl::PointCloud<pcl::PointXYZRGB>());
+    ewok::EuclideanDistanceNormalRingBuffer<POW>::PointCloud cloud_dyn;
+
+    if(cloud_dynamic->width > 0)
+    {
+        pcl::VoxelGrid<pcl::PointXYZRGB> sor_d;
+        sor_d.setInputCloud(cloud_dynamic);
+        sor_d.setLeafSize(res, res, res);
+        sor_d.filter(*cloud_filtered_dynamic);
+
+        //chg
+        std::vector<pcl::PointXYZRGB, Eigen::aligned_allocator<pcl::PointXYZRGB> > points_dyn =
+                cloud_filtered_dynamic->points; //  cloud_2->points;
+        for(int i = 0; i < points_dyn.size(); ++i)
+        {
+            cloud_dyn.push_back(Eigen::Vector4f(points_dyn.at(i).x, points_dyn.at(i).y, points_dyn.at(i).z, 0));
+        }
+
+    }
+
 
     // compute ewol pointcloud and origin
     Eigen::Vector3f origin = (transform * Eigen::Vector4f(0, 0, 0, 1)).head<3>();
     ewok::EuclideanDistanceNormalRingBuffer<POW>::PointCloud cloud_ew;
     std::vector<pcl::PointXYZRGB, Eigen::aligned_allocator<pcl::PointXYZRGB> > points =
-        cloud_filtered->points;
+            cloud_filtered->points; //  cloud_2->points;
 
     for(int i = 0; i < points.size(); ++i)
     {
         cloud_ew.push_back(Eigen::Vector4f(points.at(i).x, points.at(i).y, points.at(i).z, 0));
     }
+
 
     // initialize the ringbuffer map
     if(!initialized)
@@ -278,8 +303,12 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
     double t1 = ros::Time::now().toSec();
     rrb->insertPointCloud(cloud_ew, origin);
 
+    // insert dynamic points to ringbuffer
+    if(cloud_dynamic->width > 0)
+        rrb->insertPointCloudDynamic(cloud_dyn, origin);
+
     // Insert Semantic Info here, CHG
-    rrb->insertPointCloudSemanticLabel(semantic_cloud_body, objects_updated);
+    rrb->insertPointCloudSemanticLabel(*cloud_2, objects_updated);
 
     rrb->updateDistance();
     double t2 = ros::Time::now().toSec();
@@ -330,7 +359,8 @@ void timerCallback(const ros::TimerEvent& e)
     /* Semantic cloud */
     pcl::PointCloud<pcl::PointXYZI> semantic_cloud;
     Eigen::Vector3d center_s;
-    rrb->getBufferSemanticCloud(semantic_cloud, center_s, direction_x, direction_y);
+    // rrb->getBufferSemanticCloud(semantic_cloud, center_s, direction_x, direction_y);
+    rrb->getBufferObstacleSemanticCloud(semantic_cloud, center_s, direction_x, direction_y);
 
     // convert to ROS message and publish
     sensor_msgs::PointCloud2 cloud2_semantic;

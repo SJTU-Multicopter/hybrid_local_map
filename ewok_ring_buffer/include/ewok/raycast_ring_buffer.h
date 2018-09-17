@@ -43,6 +43,7 @@ class RaycastRingBuffer {
   static const _Flag free_flag = (1 << 1);
   static const _Flag free_ray_flag = (1 << 2);
   static const _Flag updated_flag = (1 << 3);
+  static const _Flag dynamic_flag = (1 << 4); //chg
 
   static const _Flag insertion_flags = (occupied_flag | free_flag | free_ray_flag);
 
@@ -52,7 +53,7 @@ class RaycastRingBuffer {
   static constexpr double max_val = 3.5;
 
   static constexpr double hit = 0.85;
-  static constexpr double miss = -0.4;
+  static constexpr double miss = -0.5; // Origin -0.4
 
   static constexpr _Datatype datatype_max = std::numeric_limits<_Datatype>::max(); // 32767
   static constexpr _Datatype datatype_min = std::numeric_limits<_Datatype>::min();  // minimum(not lowest), positive
@@ -107,6 +108,79 @@ class RaycastRingBuffer {
 
     updated_min_ = offset + Vector3i(_N-1, _N-1, _N-1);
     updated_max_ = offset;
+  }
+
+  void insertPointCloudDynamic(const PointCloud &cloud, const Vector3 &origin) {
+      Vector3i origin_idx;
+      occupancy_buffer_.getIdx(origin, origin_idx);
+
+      if (!occupancy_buffer_.insideVolume(
+              origin_idx)) {
+          std::cout <<"Origin outside of volume. Skipping pointcloud.\n";
+          return;
+      }
+
+      Vector3i min_idx = origin_idx; // 3 channels index
+      Vector3i max_idx = origin_idx;
+
+      // Iterate over all dynamic points in pointcloud and mark occupied.
+      for (const Vector4 &vec : cloud) {
+          Vector3 v = vec.template head<3>();
+          Vector3i idx;
+          occupancy_buffer_.getIdx(v, idx);
+
+          if (occupancy_buffer_.insideVolume(idx)) {
+              flag_buffer_.at(idx) |= occupied_flag; // 0001
+
+              _Datatype &occupancy_data = occupancy_buffer_.at(idx);
+
+              bool was_occupied = isOccupied(occupancy_data);
+              addHitDynamic(occupancy_data);
+              bool is_occupied = isOccupied(occupancy_data);
+
+              flag_buffer_.at(idx) &= ~insertion_flags;
+
+              if (was_occupied != is_occupied) {
+                  flag_buffer_.at(idx) |= updated_flag;
+
+                  updated_min_ = updated_min_.array().min(idx.array());
+                  updated_max_ = updated_max_.array().max(idx.array());
+              }
+          }
+      }
+
+//      std::cout << "I am bot 001\n";
+//      std::cout << min_idx(0) << ", " << max_idx(0) <<","<< min_idx(1) <<","<< max_idx(1)<<","<<min_idx(2) << ","<<max_idx(2)<<std::endl;
+//
+//      // Iterate over all marked voxels and update
+//      for (int x = min_idx(0); x <= max_idx(0); ++x) {
+//          for (int y = min_idx(1); y <= max_idx(1); ++y) {
+//              for (int z = min_idx(2); z <= max_idx(2); ++z) {
+//
+//                  Vector3i idx(x, y, z);
+//
+//                  if (flag_buffer_.at(idx) & occupied_flag) {  // if is occupied
+//
+//                      _Datatype &occupancy_data = occupancy_buffer_.at(idx);
+//
+//                      bool was_occupied = isOccupied(occupancy_data);
+//                      addHitDynamic(occupancy_data);
+//                      bool is_occupied = isOccupied(occupancy_data);
+//
+//                      flag_buffer_.at(idx) &= ~insertion_flags;
+//
+//                      if (was_occupied != is_occupied) {
+//                          flag_buffer_.at(idx) |= updated_flag;
+//
+//                          updated_min_ = updated_min_.array().min(idx.array());
+//                          updated_max_ = updated_max_.array().max(idx.array());
+//                      }
+//
+//                  }
+//              }
+//          }
+//      }
+
   }
 
   void insertPointCloud(const PointCloud &cloud, const Vector3 &origin) {
@@ -270,13 +344,18 @@ class RaycastRingBuffer {
 
  protected:
 
-  static inline void addHit(_Datatype & d) { // TODO: add a function like this and use to semantic obstacles, chg
+  static inline void addHit(_Datatype & d) {
     int occ = d;
     occ += datatype_hit;
     if(occ > datatype_max) occ = datatype_max;
     d = occ;
 
     //std::cout<<"datatype_hit:" << datatype_hit << " datatype_range:" << datatype_range << " datatype_max:" << datatype_max << std::endl;
+  }
+
+
+  static inline void addHitDynamic(_Datatype & d) { //  add a function like addHit and use to semantic obstacles, chg
+      d = datatype_max;  // To max
   }
 
   static inline void addMiss(_Datatype & d) {
@@ -294,7 +373,7 @@ class RaycastRingBuffer {
     return d < datatype_miss;
   }
 
-  void closestPointInVolume(const Vector3 &point,  
+  void closestPointInVolume(const Vector3 &point,
                            const Vector3 &origin,
                            Vector3 &res) {
     Vector3 diff = point - origin;

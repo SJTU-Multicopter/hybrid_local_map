@@ -56,13 +56,22 @@ class EuclideanDistanceNormalRingBuffer
         occupancy_buffer_.insertPointCloud(cloud, origin);
     }
 
-
-    void insertPointCloudSemanticLabel(const pcl::PointCloud<pcl::PointXYZI> &cloud_label, bool &objects_updated)
+    void insertPointCloudDynamic(const PointCloud &cloud, const Vector3 &origin)
     {
-        
+        std::cout<<"into dynamic processing!!"<<std::endl;
+        occupancy_buffer_.insertPointCloudDynamic(cloud, origin);
+    }
+
+
+    void insertPointCloudSemanticLabel(const pcl::PointCloud<pcl::PointXYZRGB> &cloud_label, bool &objects_updated)
+    {
+        static int decay_step = 1;
+        static int start_line = 5;
+        static int inverse_threshold = 3;
+
         if(objects_updated)
         {
-            std::vector<pcl::PointXYZI, Eigen::aligned_allocator<pcl::PointXYZI>> points = cloud_label.points;
+            std::vector<pcl::PointXYZRGB, Eigen::aligned_allocator<pcl::PointXYZRGB>> points = cloud_label.points;
        
             // add label and posibility
             for(int i = 0; i < int(points.size()); ++i)
@@ -78,35 +87,40 @@ class EuclideanDistanceNormalRingBuffer
                 if(semantic_label_.insideVolume(idx))
                 {
                     // Update labels and possibility
-                    float label_temp = points.at(i).intensity; //cloud_label.points[i].intensity;
-                    //if(label_temp > 1) std::cout << "11\t";
+                    float label_temp = points.at(i).rgb; //cloud_label.points[i].intensity;
 
                     if(semantic_label_.at(idx) == label_temp) // The same label comes, add possibility
                     {
-                        if(label_possibility_.at(idx) < 254) label_possibility_.at(idx) += 2;
+                        if(label_possibility_.at(idx) < 250) label_possibility_.at(idx) += 3;
                     }
                     else  // A different label comes
                     {
                         if(label_temp == 3 && semantic_label_.at(idx) > 3) // 3: ordinary obstacle, reduce possibility
                         {
-                            if(label_possibility_.at(idx) > 1) 
-                                label_possibility_.at(idx) -= 1; // decay by time
+                            if(label_possibility_.at(idx) > inverse_threshold)
+                                label_possibility_.at(idx) -= decay_step; // decay by time
 
-                            if(label_possibility_.at(idx) <= 1)
+                            if(label_possibility_.at(idx) <= inverse_threshold)
                             {
                                 semantic_label_.at(idx) = 3; // 3: ordinary obstacle
-                                label_possibility_.at(idx) = 2;
+                                label_possibility_.at(idx) = start_line;
                             }
                         }
                         else if(label_temp == 3 && semantic_label_.at(idx) < 3) // Original value is 0, free space is 2, set as ordinary obstacle: 3
                         {
                             semantic_label_.at(idx) = 3;
-                            label_possibility_.at(idx) = 2;
+                            label_possibility_.at(idx) = start_line;
+                        }
+                        else if(label_temp == 0)
+                        {
+                            if(label_possibility_.at(idx) > decay_step)
+                                label_possibility_.at(idx) -= decay_step; // decay by time
                         }
                         else 
                         {
                             semantic_label_.at(idx) = label_temp;  // New type(Not ordinary obstacle) comes. Replace
-                            label_possibility_.at(idx) = 2;
+                            label_possibility_.at(idx) = start_line;
+                            //std::cout << "label=" <<  label_temp << " ";
                         }
                     }
                 }
@@ -234,6 +248,8 @@ class EuclideanDistanceNormalRingBuffer
     // get semantic ring buffer. intensity is samantic label
     void getBufferSemanticCloud(pcl::PointCloud<pcl::PointXYZI> &cloud, Eigen::Vector3d &center, double dir_x, double dir_y)
     {
+        static int inverse_threshold = 3;
+
         // get center of ring buffer
         Vector3i c_idx = getVolumeCenter();
         Vector3 ct;
@@ -264,13 +280,13 @@ class EuclideanDistanceNormalRingBuffer
                         pclp.y = p(1);
                         pclp.z = p(2);
 
-                        if(semantic_label_.at(coord) > 3.f)
+                        if(semantic_label_.at(coord) > 3.f && label_possibility_.at(coord) > inverse_threshold)
                             pclp.intensity = semantic_label_.at(coord);
                         else
                             pclp.intensity = 3.f; //Ordernary obstacle
 
                         cloud.points.push_back(pclp);
-                        //if(pclp.intensity > 1.1) std::cout << "person\t";
+                        //if(pclp.intensity > 4.f) std::cout << "person\t";
                     }
                     else if(occupancy_buffer_.isFree(coord)) //Free space semantic label should be eliminated
                     {
@@ -293,17 +309,65 @@ class EuclideanDistanceNormalRingBuffer
                         if(x_norm * dir_x + y_norm * dir_y > 0.8)
                         {
                             semantic_label_.at(coord) = 1; //Free space target
-                            label_possibility_.at(coord) = 2;
+                            label_possibility_.at(coord) = 5;
                             pclp.intensity = 1;
                         }
                         else
                         {
                             semantic_label_.at(coord) = 2; //Free space
-                            label_possibility_.at(coord) = 2;
+                            label_possibility_.at(coord) = 5;
                             pclp.intensity = 2;
                         }
                     
                         cloud.points.push_back(pclp);
+                    }
+                }
+            }
+        }
+    }
+
+    // get obstacle semantic ring buffer. intensity is samantic label
+    void getBufferObstacleSemanticCloud(pcl::PointCloud<pcl::PointXYZI> &cloud, Eigen::Vector3d &center, double dir_x, double dir_y)
+    {
+        static int inverse_threshold = 3;
+
+        // get center of ring buffer
+        Vector3i c_idx = getVolumeCenter();
+        Vector3 ct;
+        getPoint(c_idx, ct);
+        center(0) = ct(0);
+        center(1) = ct(1);
+        center(2) = ct(2);
+
+        // convert ring buffer to point cloud
+        Vector3i off;
+        semantic_label_.getOffset(off);
+        for(int x = 0; x < _N; x++)
+        {
+            for(int y = 0; y < _N; y++)
+            {
+                for(int z = 0; z < _N; z++)
+                {
+                    // only occupied voxel is return
+                    Vector3i coord(x, y, z);
+                    coord += off;
+                    if(occupancy_buffer_.isOccupied(coord))
+                    {
+                        Vector3 p;
+                        getPoint(coord, p);
+
+                        pcl::PointXYZI pclp;
+                        pclp.x = p(0);
+                        pclp.y = p(1);
+                        pclp.z = p(2);
+
+                        if(semantic_label_.at(coord) > 3.f && label_possibility_.at(coord) > inverse_threshold)
+                            pclp.intensity = semantic_label_.at(coord);
+                        else
+                            pclp.intensity = 3.f; //Ordernary obstacle
+
+                        cloud.points.push_back(pclp);
+                        //if(pclp.intensity > 4.f) std::cout << "person\t";
                     }
                 }
             }
