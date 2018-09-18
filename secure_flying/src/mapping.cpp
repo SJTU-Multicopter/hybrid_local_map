@@ -20,7 +20,7 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/io/pcd_io.h>
-#include "/home/clarence/catkin_ws/devel/include/object_msgs/ObjectsInBoxes.h"
+#include "object_msgs/ObjectsInBoxes.h"
 #include <iostream>
 #include <string>
 #include <fstream>
