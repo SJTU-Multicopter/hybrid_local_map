@@ -2,7 +2,7 @@
 #define EWOK_RING_BUFFER_INCLUDE_EWOK_ED_NOR_RING_BUFFER_H_
 
 #include <ewok/raycast_ring_buffer.h>
-
+#include <ros/ros.h>
 #include <deque>
 #include <vector>
 
@@ -230,7 +230,7 @@ class EuclideanDistanceNormalRingBuffer
                     // only occupied voxel is return
                     Vector3i coord(x, y, z);
                     coord += off;
-                    if(occupancy_buffer_.isOccupied(coord))
+                    if(occupancy_buffer_.isOccupied(coord)) //chg, problem
                     {
                         Vector3 p;
                         getPoint(coord, p);
@@ -568,7 +568,7 @@ class EuclideanDistanceNormalRingBuffer
         min_vec.array() = min_vec.array().max(Vector3i(0, 0, 0).array());
         max_vec.array() = max_vec.array().min(Vector3i(_N - 1, _N - 1, _N - 1).array());
 
-        // ROS_INFO_STREAM("min_vec: " << min_vec.transpose() << " max_vec: " << max_vec.transpose());
+        ROS_INFO_STREAM("min_vec: " << min_vec.transpose() << " max_vec: " << max_vec.transpose());
 
         for(int x = min_vec[0]; x <= max_vec[0]; x++)
         {
