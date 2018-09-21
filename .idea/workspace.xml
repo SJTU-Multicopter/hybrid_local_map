@@ -95,7 +95,11 @@
   <component name="ChangeListManager">
     <list default="true" id="987385d1-dda5-469a-97e5-223669643939" name="Default" comment="">
       <change afterPath="$PROJECT_DIR$/.idea/codeStyles/Project.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dictionaries/ubuntu.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/hybrid_local_map.iml" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/darknet_ros" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/darknet_ros/darknet" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros/darknet" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/darknet_ros/darknet_ros/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros/darknet_ros/CMakeLists.txt" afterDir="false" />
@@ -105,8 +109,8 @@
       <change beforePath="$PROJECT_DIR$/secure_flying/src/mapping.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/secure_flying/src/mapping.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/yolov3/CMakeLists.txt" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/yolov3/package.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/yolov3/src/.idea/misc.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/yolov3/src/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/yolov3/src/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/yolov3/src/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/yolov3/src/.idea/src.iml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/yolov3/src/.idea/workspace.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/yolov3/src/detect.py" beforeDir="false" />
@@ -137,7 +141,7 @@
       <file leaf-file-name="mapping.cpp" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/secure_flying/src/mapping.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="196">
+            <state relative-caret-position="367">
               <caret line="305" selection-start-line="305" selection-end-line="305" />
               <folding>
                 <element signature="e#0#36#0" expanded="true" />
@@ -208,7 +212,7 @@
     <packageJsonPaths />
   </component>
   <component name="OCFindUsagesOptions" text="true" ivars="false" properties="true" derivedClasses="false" />
-  <component name="ProjectFrameBounds" extendedState="7">
+  <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="2169" />
     <option name="y" value="-4" />
     <option name="width" value="1390" />
@@ -494,12 +498,12 @@
       <workItem from="1537516561406" duration="288000" />
       <workItem from="1537516862906" duration="7000" />
       <workItem from="1537516886431" duration="9000" />
-      <workItem from="1537516919659" duration="796000" />
+      <workItem from="1537516919659" duration="1279000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="8140000" />
+    <option name="totallyTimeSpent" value="8623000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="1920" y="-4" width="1920" height="1084" extended-state="6" />
@@ -625,7 +629,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/secure_flying/src/mapping.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="196">
+        <state relative-caret-position="367">
           <caret line="305" selection-start-line="305" selection-end-line="305" />
           <folding>
             <element signature="e#0#36#0" expanded="true" />
