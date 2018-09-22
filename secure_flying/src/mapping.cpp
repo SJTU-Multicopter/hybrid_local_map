@@ -147,6 +147,11 @@ void objectsCallback(const darknet_ros_msgs::BoundingBoxes& objects)
             int range_y_min = objects.bounding_boxes[m].ymin;
             int range_y_max = objects.bounding_boxes[m].ymax;
 
+            if(range_x_min > IMGWIDTH - 1) range_x_min = IMGWIDTH - 1;
+            if(range_x_min < 0) range_x_min = 0;
+            if(range_x_max > IMGWIDTH - 1) range_x_max = IMGWIDTH - 1;
+            if(range_x_max < 0) range_x_max = 0;
+
             for(int i = range_x_min; i <= range_x_max; i++)
             {
                 for(int j = range_y_min; j <= range_y_max; j++)
@@ -352,25 +357,27 @@ void timerCallback(const ros::TimerEvent& e)
 
 
     /* Free space cloud*/
-    pcl::PointCloud<pcl::PointXYZ> free_cloud;
-    Eigen::Vector3d center_fs;
-    rrb.getBufferFSCloud(free_cloud, center_fs);
-
-    // convert to ROS message and publish
-    sensor_msgs::PointCloud2 cloud2_fs;
-    pcl::toROSMsg(free_cloud, cloud2_fs);
-
-    // message publish should have the same time stamp
-    cloud2_fs.header.stamp = ros::Time::now();
-    cloud2_fs.header.frame_id = "world";
-    cloud_fs_pub.publish(cloud2_fs);
+//    pcl::PointCloud<pcl::PointXYZ> free_cloud;
+//    Eigen::Vector3d center_fs;
+//    rrb.getBufferFSCloud(free_cloud, center_fs);
+//
+//    // convert to ROS message and publish
+//    sensor_msgs::PointCloud2 cloud2_fs;
+//    pcl::toROSMsg(free_cloud, cloud2_fs);
+//
+//    // message publish should have the same time stamp
+//    cloud2_fs.header.stamp = ros::Time::now();
+//    cloud2_fs.header.frame_id = "world";
+//    cloud_fs_pub.publish(cloud2_fs);
 
 
     /* Semantic cloud */
     pcl::PointCloud<pcl::PointXYZI> semantic_cloud;
     Eigen::Vector3d center_s;
     // rrb->getBufferSemanticCloud(semantic_cloud, center_s, direction_x, direction_y);
-    rrb.getBufferObstacleSemanticCloud(semantic_cloud, center_s, direction_x, direction_y);
+    // rrb.getBufferObstacleSemanticCloud(semantic_cloud, center_s, direction_x, direction_y);
+    rrb.getBufferDynamicObstacleCloud(semantic_cloud, center_s, direction_x, direction_y);
+
 
     // convert to ROS message and publish
     sensor_msgs::PointCloud2 cloud2_semantic;
@@ -384,10 +391,10 @@ void timerCallback(const ros::TimerEvent& e)
 
     //publish center
     geometry_msgs::PointStamped center_p;
-    center_p.header = cloud2_fs.header;
-    center_p.point.x = center_fs(0);
-    center_p.point.y = center_fs(1);
-    center_p.point.z = center_fs(2);
+    center_p.header = cloud2_semantic.header;
+    center_p.point.x = center_s(0);
+    center_p.point.y = center_s(1);
+    center_p.point.z = center_s(2);
     center_pub.publish(center_p);
 
      /* Write */

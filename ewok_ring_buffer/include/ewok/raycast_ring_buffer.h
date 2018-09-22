@@ -355,7 +355,9 @@ class RaycastRingBuffer {
 
 
   static inline void addHitDynamic(_Datatype & d) { //  add a function like addHit and use to semantic obstacles, chg
-      d = datatype_max;  // To max
+    int occ = d;
+    occ = datatype_max; // To max
+    d = occ;
   }
 
   static inline void addMiss(_Datatype & d) {

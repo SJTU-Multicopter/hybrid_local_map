@@ -240,6 +240,27 @@ class EuclideanDistanceNormalRingBuffer
                         pclp.z = p(2);
                         cloud.points.push_back(pclp);
                     }
+//                    bool occupied = false;
+//                    try {
+//                        occupied = occupancy_buffer_.isOccupied(coord);
+//                    }
+//                    catch(int id)
+//                    {
+//                        std::cout<<"Error "<< id << std::endl;
+//                        continue;
+//                    }
+//
+//                    if(occupied) //chg, problem
+//                    {
+//                        Vector3 p;
+//                        getPoint(coord, p);
+//                        pcl::PointXYZ pclp;
+//                        pclp.x = p(0);
+//                        pclp.y = p(1);
+//                        pclp.z = p(2);
+//                        cloud.points.push_back(pclp);
+//                    }
+
                 }
             }
         }
@@ -365,6 +386,50 @@ class EuclideanDistanceNormalRingBuffer
                             pclp.intensity = semantic_label_.at(coord);
                         else
                             pclp.intensity = 3.f; //Ordernary obstacle
+
+                        cloud.points.push_back(pclp);
+                        //if(pclp.intensity > 4.f) std::cout << "person\t";
+                    }
+                }
+            }
+        }
+    }
+
+    void getBufferDynamicObstacleCloud(pcl::PointCloud<pcl::PointXYZI> &cloud, Eigen::Vector3d &center, double dir_x, double dir_y)
+    {
+        static int inverse_threshold = 3;
+
+        // get center of ring buffer
+        Vector3i c_idx = getVolumeCenter();
+        Vector3 ct;
+        getPoint(c_idx, ct);
+        center(0) = ct(0);
+        center(1) = ct(1);
+        center(2) = ct(2);
+
+        // convert ring buffer to point cloud
+        Vector3i off;
+        semantic_label_.getOffset(off);
+        for(int x = 0; x < _N; x++)
+        {
+            for(int y = 0; y < _N; y++)
+            {
+                for(int z = 0; z < _N; z++)
+                {
+                    // only occupied voxel is return
+                    Vector3i coord(x, y, z);
+                    coord += off;
+                    if(occupancy_buffer_.isOccupied(coord) && semantic_label_.at(coord) > 3.f && label_possibility_.at(coord) > inverse_threshold )
+                    {
+                        Vector3 p;
+                        getPoint(coord, p);
+
+                        pcl::PointXYZI pclp;
+                        pclp.x = p(0);
+                        pclp.y = p(1);
+                        pclp.z = p(2);
+
+                        pclp.intensity = semantic_label_.at(coord);
 
                         cloud.points.push_back(pclp);
                         //if(pclp.intensity > 4.f) std::cout << "person\t";
