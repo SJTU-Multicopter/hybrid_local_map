@@ -276,7 +276,28 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
             // Find the center of the dynamic objects
             int mid_x = (semantic_objects[i].tl_x + semantic_objects[i].br_x) / 2;
             int mid_y = (semantic_objects[i].tl_y + semantic_objects[i].br_y) / 2;
+
             float object_z = cloud_in->points[mid_x + mid_y * IMGWIDTH].z;
+            int rect_length_half = 3;
+            for(int m = -1; m < 2; m ++)  // Find nearest point among center 10 points. Character "Tian" corners
+            {
+                int offset_x = m * rect_length_half;
+
+                for(int n = -1; n < 2; n++)
+                {
+                    int offset_y = n * rect_length_half;
+
+                    int new_x = mid_x + offset_x;
+                    int new_y = mid_y + offset_y;
+
+                    if(new_x < 1 || new_x > IMGWIDTH - 2) continue;
+                    if(new_y < 1 || new_y > IMGHEIGHT - 2) continue;
+
+                    if(cloud_in->points[new_x + new_y * IMGWIDTH].z < object_z)
+                        object_z = cloud_in->points[new_x + new_y * IMGWIDTH].z;
+                }
+
+            }
 
             for(int x = semantic_objects[i].tl_x; x <= semantic_objects[i].br_x; x++)
             {

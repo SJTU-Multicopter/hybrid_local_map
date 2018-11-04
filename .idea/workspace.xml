@@ -95,13 +95,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="987385d1-dda5-469a-97e5-223669643939" name="Default" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/darknet_ros" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/darknet_ros/darknet" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros/darknet" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/darknet_ros/darknet_ros/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros/darknet_ros/CMakeLists.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/darknet_ros/darknet_ros/config/ros.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros/darknet_ros/config/ros.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h" beforeDir="false" afterPath="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h" beforeDir="false" afterPath="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/secure_flying/src/mapping.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/secure_flying/src/mapping.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/secure_flying/src/static_mapping.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/secure_flying/src/static_mapping.cpp" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <ignored path="$PROJECT_DIR$/../cmake-build-debug/" />
@@ -120,8 +120,8 @@
             <file leaf-file-name="static_mapping.cpp" pinned="false" current-in-tab="true">
               <entry file="file://$PROJECT_DIR$/secure_flying/src/static_mapping.cpp">
                 <provider selected="true" editor-type-id="text-editor">
-                  <state relative-caret-position="323">
-                    <caret line="230" column="93" selection-start-line="230" selection-start-column="93" selection-end-line="230" selection-end-column="93" />
+                  <state relative-caret-position="513">
+                    <caret line="240" column="29" selection-start-line="240" selection-start-column="29" selection-end-line="240" selection-end-column="29" />
                     <folding>
                       <element signature="e#0#36#0" expanded="true" />
                     </folding>
@@ -151,8 +151,8 @@
       <file leaf-file-name="mapping.cpp" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/secure_flying/src/mapping.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="332">
-              <caret line="401" column="5" lean-forward="true" selection-start-line="401" selection-start-column="5" selection-end-line="401" selection-end-column="5" />
+            <state relative-caret-position="199">
+              <caret line="305" column="50" lean-forward="true" selection-start-line="305" selection-start-column="50" selection-end-line="305" selection-end-column="50" />
               <folding>
                 <element signature="e#0#36#0" expanded="true" />
                 <element signature="e#680#760#0" expanded="true" />
@@ -191,8 +191,8 @@
       <file leaf-file-name="ed_nor_ring_buffer.h" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="340">
-              <caret line="278" column="39" selection-start-line="278" selection-start-column="9" selection-end-line="278" selection-end-column="39" />
+            <state relative-caret-position="321">
+              <caret line="61" column="31" selection-start-line="61" selection-start-column="26" selection-end-line="61" selection-end-column="49" />
               <folding>
                 <element signature="e#121#158#0" expanded="true" />
               </folding>
@@ -203,8 +203,8 @@
       <file leaf-file-name="raycast_ring_buffer.h" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="962">
-              <caret line="112" column="7" selection-start-line="112" selection-start-column="7" selection-end-line="112" selection-end-column="7" />
+            <state relative-caret-position="570">
+              <caret line="45" column="51" lean-forward="true" selection-start-line="45" selection-start-column="51" selection-end-line="45" selection-end-column="51" />
             </state>
           </provider>
         </entry>
@@ -236,6 +236,7 @@
       <find>senantic_labels</find>
       <find>semantic_labels</find>
       <find>label_possibility_</find>
+      <find>resolution</find>
     </findStrings>
     <dirStrings>
       <dir>/usr/include/c++</dir>
@@ -253,9 +254,9 @@
         <option value="$PROJECT_DIR$/yolov3/src/src/detect_test.cpp" />
         <option value="$PROJECT_DIR$/CMakeLists.txt" />
         <option value="$PROJECT_DIR$/secure_flying/CMakeLists.txt" />
-        <option value="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h" />
         <option value="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h" />
         <option value="$PROJECT_DIR$/secure_flying/src/static_mapping.cpp" />
+        <option value="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h" />
         <option value="$PROJECT_DIR$/secure_flying/src/mapping.cpp" />
       </list>
     </option>
@@ -564,12 +565,12 @@
       <workItem from="1539492976465" duration="14940000" />
       <workItem from="1540281771029" duration="3000" />
       <workItem from="1540368362897" duration="39000" />
-      <workItem from="1541228994845" duration="18231000" />
+      <workItem from="1541228994845" duration="22598000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="48691000" />
+    <option name="totallyTimeSpent" value="53058000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -914,13 +915,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="962">
-          <caret line="112" column="7" selection-start-line="112" selection-start-column="7" selection-end-line="112" selection-end-column="7" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file:///usr/include/pcl-1.7/pcl/point_cloud.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="710">
@@ -928,30 +922,37 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/secure_flying/src/static_mapping.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="323">
-          <caret line="230" column="93" selection-start-line="230" selection-start-column="93" selection-end-line="230" selection-end-column="93" />
-          <folding>
-            <element signature="e#0#36#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="340">
-          <caret line="278" column="39" selection-start-line="278" selection-start-column="9" selection-end-line="278" selection-end-column="39" />
+        <state relative-caret-position="321">
+          <caret line="61" column="31" selection-start-line="61" selection-start-column="26" selection-end-line="61" selection-end-column="49" />
           <folding>
             <element signature="e#121#158#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="570">
+          <caret line="45" column="51" lean-forward="true" selection-start-line="45" selection-start-column="51" selection-end-line="45" selection-end-column="51" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/secure_flying/src/static_mapping.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="513">
+          <caret line="240" column="29" selection-start-line="240" selection-start-column="29" selection-end-line="240" selection-end-column="29" />
+          <folding>
+            <element signature="e#0#36#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/secure_flying/src/mapping.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="332">
-          <caret line="401" column="5" lean-forward="true" selection-start-line="401" selection-start-column="5" selection-end-line="401" selection-end-column="5" />
+        <state relative-caret-position="199">
+          <caret line="305" column="50" lean-forward="true" selection-start-line="305" selection-start-column="50" selection-end-line="305" selection-end-column="50" />
           <folding>
             <element signature="e#0#36#0" expanded="true" />
             <element signature="e#680#760#0" expanded="true" />
