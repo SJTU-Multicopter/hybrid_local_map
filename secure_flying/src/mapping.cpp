@@ -71,6 +71,7 @@ typedef struct LabeledObjects
 }labeledObjects;
 
 std::vector<labeledObjects> semantic_objects;
+unsigned char semantic_labels[IMGWIDTH][IMGHEIGHT];
 
 //CHG
 void directionCallback(const std_msgs::Float64MultiArray& direction)
@@ -113,6 +114,15 @@ void objectsCallback(const darknet_ros_msgs::BoundingBoxes& objects)
 {
     /*initialize */
     semantic_objects.clear();
+
+    /*initialize labels*/
+    for(int i = 0; i < IMGWIDTH; i++)
+    {
+        for(int j = 0; j < IMGHEIGHT; j++)
+        {
+            semantic_labels[i][j] = 3; // Set all points to common obstacles when initialzing, including NAN. NAN will not be inserted into map, so it doesn't matter.
+        }
+    }
 
     /* Lock */
     while(label_mat_locked)
@@ -164,6 +174,15 @@ void objectsCallback(const darknet_ros_msgs::BoundingBoxes& objects)
         temp_object.br_y = range_y_max;
         temp_object.label = label;
         semantic_objects.push_back(temp_object);
+
+        // For object labels
+        for(int i = range_x_min - 1; i < range_x_max; i++)
+        {
+            for(int j = range_y_min - 1; j < range_y_max; j++)
+            {
+                semantic_labels[i][j] = label;
+            }
+        }
     }
 
     objects_updated = true;
@@ -213,22 +232,31 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
     // convert cloud to pcl form
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_in(new pcl::PointCloud<pcl::PointXYZRGB>());
     pcl::fromROSMsg(*cloud, *cloud_in);
-    // transform to world frame
-    //pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_2(new pcl::PointCloud<pcl::PointXYZRGB>());
-    //pcl::transformPointCloud(*cloud_in, *cloud_2, transform);
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_1(new pcl::PointCloud<pcl::PointXYZRGB>());
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_2(new pcl::PointCloud<pcl::PointXYZRGB>());
-    pcl::transformPointCloud(*cloud_in, *cloud_1, t_c_b);
-    pcl::transformPointCloud(*cloud_1, *cloud_2, transform);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_modified(new pcl::PointCloud<pcl::PointXYZRGB>());  // replace reconstructed area
+    pcl::copyPointCloud(*cloud_in, *cloud_modified);
 
+    // define point clouds for dynamic objects
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_dynamic_cam(new pcl::PointCloud<pcl::PointXYZRGB>()); //chg, for dynamic objects, camera coordinate
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_dynamic(new pcl::PointCloud<pcl::PointXYZRGB>()); //chg, for dynamic objects
 
     //For calculate fx, fy, cx, cy from data
-    //P1: 320, 200, u = 0, v = -40
-    //P2: 280, 260, u = -40, v = 20
+//    P1: 320, 200, u = 0, v = -40
+//    P2: 280, 260, u = -40, v = 20
 //    std::cout << "P1: " << cloud_in->points[128320].x << "," << cloud_in->points[128320].y << "," << cloud_in->points[128320].z << "\n";
 //    std::cout << "P2: " << cloud_in->points[166680].x << "," << cloud_in->points[166680].y << "," << cloud_in->points[166680].z << "\n";
+
+
+    // add semantic labels, dynamic labels will be relabeled later according to reconstruction results
+    //std::cout << cloud_modified->width << "**"<<cloud_modified->height<<std::endl;
+
+    for(int j = 0; j < cloud_modified->height; j++) //y
+    {
+        int start_num = j * IMGWIDTH;
+        for(int i = 0; i < cloud_modified->width; i++) //x
+        {
+            cloud_modified->points[i + start_num].rgb = semantic_labels[i][j];
+        }
+    }
 
 
     // create points for reconstruction and add semantic labels. dynamic objects are considered separately. chg
@@ -239,31 +267,42 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
     label_mat_locked = true;
 
     int objects_num = semantic_objects.size();
+
     // NOTE: coordinates are different between camera and grid map
     for(int i = 0; i < semantic_objects.size(); i++)
     {
         if(semantic_objects[i].label > 4) // Dynamic objects
         {
+            // Find the center of the dynamic objects
             int mid_x = (semantic_objects[i].tl_x + semantic_objects[i].br_x) / 2;
             int mid_y = (semantic_objects[i].tl_y + semantic_objects[i].br_y) / 2;
-            float object_distance = cloud_in->points[mid_x + mid_y * IMGWIDTH].z;
+            float object_z = cloud_in->points[mid_x + mid_y * IMGWIDTH].z;
 
             for(int x = semantic_objects[i].tl_x; x <= semantic_objects[i].br_x; x++)
             {
                 for(int y = semantic_objects[i].tl_y; y <= semantic_objects[i].br_y; y++)
                 {
+                    // Reconstruct dynamic objects
                     pcl::PointXYZRGB temp_point;
-                    temp_point.x = (x - IMGWIDTH/2)* object_distance /camera_fx;
-                    temp_point.y = (y - IMGHEIGHT/2)* object_distance /camera_fy;
-                    temp_point.z = object_distance;
+                    float object_x = (x - IMGWIDTH/2) * object_z /camera_fx;
+                    float object_y = (y - IMGHEIGHT/2) * object_z /camera_fy;
+                    temp_point.x = object_x;
+                    temp_point.y = object_y;
+                    temp_point.z = object_z;
                     temp_point.rgb = (float)semantic_objects[i].label;
 
                     cloud_dynamic_cam->points.push_back(temp_point);
+
+                    // Insert reconstruction results to the modified point cloud by replacing corresponding points
+                    cloud_modified->points[x + y * IMGWIDTH].x = object_x;
+                    cloud_modified->points[x + y * IMGWIDTH].y = object_y;
+                    cloud_modified->points[x + y * IMGWIDTH].z = object_z;
+                    cloud_modified->points[x + y * IMGWIDTH].rgb = (float)semantic_objects[i].label;
                 }
             }
         }
-
     }
+
 
     label_mat_locked = false;
 
@@ -297,6 +336,17 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
 
     }
 
+    // transform to world frame for modified points
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_label_1(new pcl::PointCloud<pcl::PointXYZRGB>());
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_label_2(new pcl::PointCloud<pcl::PointXYZRGB>());
+    pcl::transformPointCloud(*cloud_modified, *cloud_label_1, t_c_b);
+    pcl::transformPointCloud(*cloud_label_1, *cloud_label_2, transform);
+
+    // transform to world frame for all original points
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_1(new pcl::PointCloud<pcl::PointXYZRGB>());
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_2(new pcl::PointCloud<pcl::PointXYZRGB>());
+    pcl::transformPointCloud(*cloud_in, *cloud_1, t_c_b);
+    pcl::transformPointCloud(*cloud_1, *cloud_2, transform);
 
     // down-sample for all
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>());
@@ -343,7 +393,7 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
         }
     }
 
-    // insert point cloud to ringbuffer
+    // insert common point cloud to ringbuffer
     double t1 = ros::Time::now().toSec();
     rrb.insertPointCloud(cloud_ew, origin);
 
@@ -354,10 +404,9 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
         rrb.insertPointCloudDynamic(cloud_dyn, origin);
     }
 
-
-//    // Insert Semantic Info here, CHG
-//    rrb.insertPointCloudSemanticLabel(*cloud_2, objects_updated);
-//    rrb.updateDistance();
+    // Insert Semantic Info here, CHG
+    rrb.insertPointCloudSemanticLabel(*cloud_label_2, objects_updated);
+    rrb.updateDistance();
 
     double t2 = ros::Time::now().toSec();
     ROS_INFO("Updating ringbuffer time: %lf ms", 1000 * (t2 - t1));

@@ -132,8 +132,6 @@ class EuclideanDistanceNormalRingBuffer
 
     }
 
-
-
     // Add offset
     virtual void setOffset(const Vector3i &off)
     {

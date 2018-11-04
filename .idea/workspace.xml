@@ -99,6 +99,9 @@
       <change beforePath="$PROJECT_DIR$/darknet_ros/darknet" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros/darknet" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/darknet_ros/darknet_ros/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros/darknet_ros/CMakeLists.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/darknet_ros/darknet_ros/config/ros.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros/darknet_ros/config/ros.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h" beforeDir="false" afterPath="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/secure_flying/src/mapping.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/secure_flying/src/mapping.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/secure_flying/src/static_mapping.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/secure_flying/src/static_mapping.cpp" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <ignored path="$PROJECT_DIR$/../cmake-build-debug/" />
@@ -117,8 +120,8 @@
             <file leaf-file-name="static_mapping.cpp" pinned="false" current-in-tab="true">
               <entry file="file://$PROJECT_DIR$/secure_flying/src/static_mapping.cpp">
                 <provider selected="true" editor-type-id="text-editor">
-                  <state relative-caret-position="592">
-                    <caret line="278" column="44" selection-start-line="278" selection-start-column="44" selection-end-line="278" selection-end-column="44" />
+                  <state relative-caret-position="323">
+                    <caret line="230" column="93" selection-start-line="230" selection-start-column="93" selection-end-line="230" selection-end-column="93" />
                     <folding>
                       <element signature="e#0#36#0" expanded="true" />
                     </folding>
@@ -145,11 +148,11 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="375">
-      <file leaf-file-name="mapping.cpp" pinned="false" current-in-tab="false">
+      <file leaf-file-name="mapping.cpp" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/secure_flying/src/mapping.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="152">
-              <caret line="263" column="9" lean-forward="true" selection-start-line="263" selection-start-column="9" selection-end-line="263" selection-end-column="9" />
+            <state relative-caret-position="332">
+              <caret line="401" column="5" lean-forward="true" selection-start-line="401" selection-start-column="5" selection-end-line="401" selection-end-column="5" />
               <folding>
                 <element signature="e#0#36#0" expanded="true" />
                 <element signature="e#680#760#0" expanded="true" />
@@ -185,11 +188,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="ed_nor_ring_buffer.h" pinned="false" current-in-tab="true">
+      <file leaf-file-name="ed_nor_ring_buffer.h" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="361">
-              <caret line="145" column="42" lean-forward="true" selection-start-line="145" selection-start-column="42" selection-end-line="145" selection-end-column="42" />
+            <state relative-caret-position="340">
+              <caret line="278" column="39" selection-start-line="278" selection-start-column="9" selection-end-line="278" selection-end-column="39" />
               <folding>
                 <element signature="e#121#158#0" expanded="true" />
               </folding>
@@ -228,8 +231,11 @@
       <find>direction_x</find>
       <find>objects_updated</find>
       <find>cloud_2</find>
-      <find>label_possibility_</find>
       <find>width</find>
+      <find>cloud_in</find>
+      <find>senantic_labels</find>
+      <find>semantic_labels</find>
+      <find>label_possibility_</find>
     </findStrings>
     <dirStrings>
       <dir>/usr/include/c++</dir>
@@ -248,8 +254,8 @@
         <option value="$PROJECT_DIR$/CMakeLists.txt" />
         <option value="$PROJECT_DIR$/secure_flying/CMakeLists.txt" />
         <option value="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h" />
-        <option value="$PROJECT_DIR$/secure_flying/src/static_mapping.cpp" />
         <option value="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h" />
+        <option value="$PROJECT_DIR$/secure_flying/src/static_mapping.cpp" />
         <option value="$PROJECT_DIR$/secure_flying/src/mapping.cpp" />
       </list>
     </option>
@@ -558,12 +564,12 @@
       <workItem from="1539492976465" duration="14940000" />
       <workItem from="1540281771029" duration="3000" />
       <workItem from="1540368362897" duration="39000" />
-      <workItem from="1541228994845" duration="11712000" />
+      <workItem from="1541228994845" duration="18231000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="42172000" />
+    <option name="totallyTimeSpent" value="48691000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -915,16 +921,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/secure_flying/src/static_mapping.cpp">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="592">
-          <caret line="278" column="44" selection-start-line="278" selection-start-column="44" selection-end-line="278" selection-end-column="44" />
-          <folding>
-            <element signature="e#0#36#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file:///usr/include/pcl-1.7/pcl/point_cloud.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="710">
@@ -932,23 +928,33 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/secure_flying/src/mapping.cpp">
+    <entry file="file://$PROJECT_DIR$/secure_flying/src/static_mapping.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="152">
-          <caret line="263" column="9" lean-forward="true" selection-start-line="263" selection-start-column="9" selection-end-line="263" selection-end-column="9" />
+        <state relative-caret-position="323">
+          <caret line="230" column="93" selection-start-line="230" selection-start-column="93" selection-end-line="230" selection-end-column="93" />
           <folding>
             <element signature="e#0#36#0" expanded="true" />
-            <element signature="e#680#760#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="361">
-          <caret line="145" column="42" lean-forward="true" selection-start-line="145" selection-start-column="42" selection-end-line="145" selection-end-column="42" />
+        <state relative-caret-position="340">
+          <caret line="278" column="39" selection-start-line="278" selection-start-column="9" selection-end-line="278" selection-end-column="39" />
           <folding>
             <element signature="e#121#158#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/secure_flying/src/mapping.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="332">
+          <caret line="401" column="5" lean-forward="true" selection-start-line="401" selection-start-column="5" selection-end-line="401" selection-end-column="5" />
+          <folding>
+            <element signature="e#0#36#0" expanded="true" />
+            <element signature="e#680#760#0" expanded="true" />
           </folding>
         </state>
       </provider>

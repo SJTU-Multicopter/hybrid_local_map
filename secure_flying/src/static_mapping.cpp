@@ -228,7 +228,7 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
         for(int j = 0; j < cloud_2->height; j++)
         {
             pcl::PointXYZI temp_p;
-            temp_p.x = cloud_2->points[i + j * IMGWIDTH].x;
+            temp_p.x = cloud_2->points[i + j * IMGWIDTH].x;   /// coordinate problem!!!!!!!!!
             temp_p.y = cloud_2->points[i + j * IMGWIDTH].y;
             temp_p.z = cloud_2->points[i + j * IMGWIDTH].z;
             temp_p.intensity = senantic_labels[i][j]; //set intensity as samantic label
