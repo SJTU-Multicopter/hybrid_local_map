@@ -20,8 +20,7 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/io/pcd_io.h>
-//#include "object_msgs/ObjectsInBoxes.h"
-#include "/home/ubuntu/catkin_ws/devel/include/darknet_ros_msgs/BoundingBoxes.h"
+#include "/home/ubuntu/catkin_ws/devel/include/object_msgs/ObjectsInBoxes.h"
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -41,36 +40,24 @@ static const int POW = 7;
 static const int N = (1 << POW);
 static const int IMGWIDTH = 640; // !!!! CHG NOTE
 static const int IMGHEIGHT = 480;
-static const float camera_fx = 208.0; // !!!! CHG NOTE
-static const float camera_fy = 203.0;
-static const float camera_cx = 0.0; // !!!! CHG NOTE
-static const float camera_cy = 0.0;
 static const bool save_pcds = false;
 static const string save_path = "/home/clarence/workspace/PointCloud/Gazebo_PCD_Training_data/";
 
-//ewok::EuclideanDistanceNormalRingBuffer<POW>::Ptr rrb;
-ewok::EuclideanDistanceNormalRingBuffer<POW> rrb(resolution, 1.0);
+ewok::EuclideanDistanceNormalRingBuffer<POW>::Ptr rrb;
 
 ros::Publisher occ_marker_pub, free_marker_pub, dist_marker_pub, norm_marker_pub;
 ros::Publisher cloud2_pub, cloud_fs_pub, cloud_semantic_pub, center_pub, traj_pub;
 
 bool objects_updated = false;
+
+
+
+unsigned char senantic_labels[IMGWIDTH][IMGHEIGHT];
 bool label_mat_locked = false;
 double direction_x = 1.0;
 double direction_y = 0.0;
 int control_label = 0;
 int save_counter = 0;
-
-typedef struct LabeledObjects
-{
-    unsigned int tl_x;
-    unsigned int tl_y;
-    unsigned int br_x;
-    unsigned int br_y;
-    unsigned char label;
-}labeledObjects;
-
-std::vector<labeledObjects> semantic_objects;
 
 //CHG
 void directionCallback(const std_msgs::Float64MultiArray& direction)
@@ -109,72 +96,67 @@ void keyboardCallback(const geometry_msgs::Twist& msg)
 }
 
 //CHG
-void objectsCallback(const darknet_ros_msgs::BoundingBoxes& objects)
+void objectsCallback(const object_msgs::ObjectsInBoxes& objects)
 {
-    /*initialize */
-    semantic_objects.clear();
-
-    /* Lock */
-    while(label_mat_locked)
+    if(objects_updated == false)
     {
-        ros::Duration(0.001).sleep(); // Sleep one second to wait for others using the label matirx
+        /*initialize labels*/
+        for(int i = 0; i < IMGWIDTH; i++)
+        {
+            for(int j = 0; j < IMGHEIGHT; j++)
+            {
+                senantic_labels[i][j] = 0;
+            }
+        }
+
+        /* Set labels of each roi. If there are overlaps, only take the last input label.*/
+        for (int m = 0; m < objects.objects_vector.size(); m++)
+        {
+            unsigned char label;
+            if(objects.objects_vector[m].object.object_name == "person")
+                label = 5;
+            else if(objects.objects_vector[m].object.object_name == "tvmonitor")
+                label = 4;
+            else if(objects.objects_vector[m].object.object_name == "chair")
+                label = 4;
+            else if(objects.objects_vector[m].object.object_name == "diningtable")
+                label = 4;
+            else if(objects.objects_vector[m].object.object_name == "sofa")
+                label = 4;
+            else
+                label = 3;
+
+            while(label_mat_locked)
+            {
+                ros::Duration(0.001).sleep(); // Sleep one second to wait for others using the label matirx
+            }
+
+            label_mat_locked = true;
+
+            int range_x_min = objects.objects_vector[m].roi.x_offset;
+            int range_x_max = objects.objects_vector[m].roi.x_offset + objects.objects_vector[m].roi.width;
+            int range_y_min = objects.objects_vector[m].roi.y_offset;
+            int range_y_max = objects.objects_vector[m].roi.y_offset + objects.objects_vector[m].roi.height;
+
+            for(int i = range_x_min; i <= range_x_max; i++)
+            {
+                for(int j = range_y_min; j <= range_y_max; j++)
+                {
+                    senantic_labels[i][j] = label;
+                }
+            }
+            label_mat_locked = false;
+
+            //cout << "Label=" <<(int)label<< endl;
+        }
+
+        objects_updated = true;
     }
-    label_mat_locked = true;
-
-    /* Set labels of each roi. If there are overlaps, only take the last input label.*/
-    for (int m = 0; m < objects.bounding_boxes.size(); m++)
-    {
-        unsigned char label;
-        if(objects.bounding_boxes[m].Class == "person")
-            label = 5;
-        else if(objects.bounding_boxes[m].Class == "cat")
-            label = 5;
-        else if(objects.bounding_boxes[m].Class == "dog")
-            label = 5;
-        else if(objects.bounding_boxes[m].Class == "laptop")
-            label = 4;
-        else if(objects.bounding_boxes[m].Class == "bed")
-            label = 4;
-        else if(objects.bounding_boxes[m].Class == "tvmonitor")
-            label = 4;
-        else if(objects.bounding_boxes[m].Class == "chair")
-            label = 4;
-        else if(objects.bounding_boxes[m].Class == "diningtable")
-            label = 4;
-        else if(objects.bounding_boxes[m].Class == "sofa")
-            label = 4;
-        else
-            label = 3;
-
-        unsigned int range_x_min = objects.bounding_boxes[m].xmin;
-        unsigned int range_x_max = objects.bounding_boxes[m].xmax;
-        unsigned int range_y_min = objects.bounding_boxes[m].ymin;
-        unsigned int range_y_max = objects.bounding_boxes[m].ymax;
-
-        if(range_x_min > IMGWIDTH - 1) range_x_min = IMGWIDTH - 1;
-        if(range_x_min < 0) range_x_min = 0;
-        if(range_x_max > IMGWIDTH - 1) range_x_max = IMGWIDTH - 1;
-        if(range_x_max < 0) range_x_max = 0;
-
-        // insert an object
-        labeledObjects temp_object;
-        temp_object.tl_x = range_x_min;
-        temp_object.br_x = range_x_max;
-        temp_object.tl_y = range_y_min;
-        temp_object.br_y = range_y_max;
-        temp_object.label = label;
-        semantic_objects.push_back(temp_object);
-    }
-
-    objects_updated = true;
-    label_mat_locked = false;
 }
 
 // this callback use input cloud to update ring buffer, and update odometry of UAV
 void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
-//
-
     _data_input_time = ros::Time::now();
 
     double elp = ros::Time::now().toSec() - _last_time.toSec();
@@ -221,96 +203,45 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
     pcl::transformPointCloud(*cloud_in, *cloud_1, t_c_b);
     pcl::transformPointCloud(*cloud_1, *cloud_2, transform);
 
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_dynamic_cam(new pcl::PointCloud<pcl::PointXYZRGB>()); //chg, for dynamic objects, camera coordinate
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_dynamic(new pcl::PointCloud<pcl::PointXYZRGB>()); //chg, for dynamic objects
+    // down-sample
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>());
+    pcl::VoxelGrid<pcl::PointXYZRGB> sor;
+    sor.setInputCloud(cloud_2);
+    float res = 0.1f;
+    sor.setLeafSize(res, res, res);
+    sor.filter(*cloud_filtered);
 
-    //For calculate fx, fy, cx, cy from data
-    //P1: 320, 200, u = 0, v = -40
-    //P2: 280, 260, u = -40, v = 20
-//    std::cout << "P1: " << cloud_in->points[128320].x << "," << cloud_in->points[128320].y << "," << cloud_in->points[128320].z << "\n";
-//    std::cout << "P2: " << cloud_in->points[166680].x << "," << cloud_in->points[166680].y << "," << cloud_in->points[166680].z << "\n";
 
-
-    // create points for reconstruction and add semantic labels. dynamic objects are considered separately. chg
+    // CHG: Match Cloud Position and RBG IMG here and turn to pcl::PointXYZI !!!
+    pcl::PointCloud<pcl::PointXYZI> semantic_cloud_body; 
+    //pcl::PointCloud<pcl::PointXYZI>::Ptr semantic_cloud (new pcl::PointCloud<pcl::PointXYZI>);
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr semantic_cloud = semantic_cloud_body.makeShared();
+    
     while(label_mat_locked)
     {
         ros::Duration(0.00001).sleep(); // Sleep to wait for others using the label matrix
     }
     label_mat_locked = true;
 
-    int objects_num = semantic_objects.size();
-    // NOTE: coordinates are different between camera and grid map
-    for(int i = 0; i < semantic_objects.size(); i++)
+    for(int i = 0; i < cloud_2->width; i++)
     {
-        if(semantic_objects[i].label > 4) // Dynamic objects
+        for(int j = 0; j < cloud_2->height; j++)
         {
-            int mid_x = (semantic_objects[i].tl_x + semantic_objects[i].br_x) / 2;
-            int mid_y = (semantic_objects[i].tl_y + semantic_objects[i].br_y) / 2;
-            float object_distance = cloud_in->points[mid_x + mid_y * IMGWIDTH].z;
-
-            for(int x = semantic_objects[i].tl_x; x <= semantic_objects[i].br_x; x++)
-            {
-                for(int y = semantic_objects[i].tl_y; y <= semantic_objects[i].br_y; y++)
-                {
-                    pcl::PointXYZRGB temp_point;
-                    temp_point.x = (x - IMGWIDTH/2)* object_distance /camera_fx;
-                    temp_point.y = (y - IMGHEIGHT/2)* object_distance /camera_fy;
-                    temp_point.z = object_distance;
-                    temp_point.rgb = (float)semantic_objects[i].label;
-
-                    cloud_dynamic_cam->points.push_back(temp_point);
-                }
-            }
+            pcl::PointXYZI temp_p;
+            temp_p.x = cloud_2->points[i + j * IMGWIDTH].x;
+            temp_p.y = cloud_2->points[i + j * IMGWIDTH].y;
+            temp_p.z = cloud_2->points[i + j * IMGWIDTH].z;
+            temp_p.intensity = senantic_labels[i][j]; //set intensity as samantic label
+            semantic_cloud_body.points.push_back(temp_p);
         }
-
     }
-
     label_mat_locked = false;
-
-    // Transform coordinates
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_trans_dynamic(new pcl::PointCloud<pcl::PointXYZRGB>());
-    pcl::transformPointCloud(*cloud_dynamic_cam, *cloud_trans_dynamic, t_c_b);
-    pcl::transformPointCloud(*cloud_trans_dynamic, *cloud_dynamic, transform);
-
-
-    // down-sample for dynamic objects, chg
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered_dynamic(new pcl::PointCloud<pcl::PointXYZRGB>());
-    ewok::EuclideanDistanceNormalRingBuffer<POW>::PointCloud cloud_dyn;
-
-    float res = 0.1f;
-
-    if(cloud_dynamic->size() > 0)
-    {
-        ROS_INFO("Dynamic filtering!");
-        pcl::VoxelGrid<pcl::PointXYZRGB> sor_d;
-        sor_d.setInputCloud(cloud_dynamic);
-        sor_d.setLeafSize(res, res, res);
-        sor_d.filter(*cloud_filtered_dynamic);
-
-        //chg
-        std::vector<pcl::PointXYZRGB, Eigen::aligned_allocator<pcl::PointXYZRGB> > points_dyn =
-                cloud_filtered_dynamic->points; //  cloud_2->points;
-        for(int i = 0; i < points_dyn.size(); ++i)
-        {
-            cloud_dyn.push_back(Eigen::Vector4f(points_dyn.at(i).x, points_dyn.at(i).y, points_dyn.at(i).z, 0));
-        }
-
-    }
-
-
-    // down-sample for all
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>());
-    pcl::VoxelGrid<pcl::PointXYZRGB> sor;
-    sor.setInputCloud(cloud_2);
-
-    sor.setLeafSize(res, res, res);
-    sor.filter(*cloud_filtered);
 
     // compute ewol pointcloud and origin
     Eigen::Vector3f origin = (transform * Eigen::Vector4f(0, 0, 0, 1)).head<3>();
     ewok::EuclideanDistanceNormalRingBuffer<POW>::PointCloud cloud_ew;
     std::vector<pcl::PointXYZRGB, Eigen::aligned_allocator<pcl::PointXYZRGB> > points =
-            cloud_filtered->points; //  cloud_2->points;
+        cloud_filtered->points;
 
     for(int i = 0; i < points.size(); ++i)
     {
@@ -321,9 +252,9 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
     if(!initialized)
     {
         Eigen::Vector3i idx;
-        rrb.getIdx(origin, idx);
+        rrb->getIdx(origin, idx);
         //ROS_INFO_STREAM("Origin: " << origin.transpose() << " idx " << idx.transpose());
-        rrb.setOffset(idx);
+        rrb->setOffset(idx);
         initialized = true;
     }
     else
@@ -332,12 +263,12 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
         while(true)
         {
             Eigen::Vector3i origin_idx, offset, diff;
-            rrb.getIdx(origin, origin_idx);
-            offset = rrb.getVolumeCenter();
+            rrb->getIdx(origin, origin_idx);
+            offset = rrb->getVolumeCenter();
             //std::cout << "origin :" << origin_idx << " center:" << offset << std::endl;
             diff = origin_idx - offset;
             if(diff.array().any())
-                rrb.moveVolume(diff.head<3>());
+                rrb->moveVolume(diff.head<3>());
             else
                 break;
         }
@@ -345,20 +276,12 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
 
     // insert point cloud to ringbuffer
     double t1 = ros::Time::now().toSec();
-    rrb.insertPointCloud(cloud_ew, origin);
+    rrb->insertPointCloud(cloud_ew, origin);
 
-    // insert dynamic points to ringbuffer
-    if(cloud_dynamic->size() > 0)
-    {
-        ROS_INFO("dynamic");
-        rrb.insertPointCloudDynamic(cloud_dyn, origin);
-    }
+    // Insert Semantic Info here, CHG
+    //rrb->insertPointCloudSemanticLabel(semantic_cloud_body, objects_updated);
 
-
-//    // Insert Semantic Info here, CHG
-//    rrb.insertPointCloudSemanticLabel(*cloud_2, objects_updated);
-//    rrb.updateDistance();
-
+    rrb->updateDistance();
     double t2 = ros::Time::now().toSec();
     ROS_INFO("Updating ringbuffer time: %lf ms", 1000 * (t2 - t1));
 
@@ -377,7 +300,7 @@ void timerCallback(const ros::TimerEvent& e)
     /*Obstacle cloud*/
     pcl::PointCloud<pcl::PointXYZ> cloud;
     Eigen::Vector3d center;
-    rrb.getBufferAsCloud(cloud, center);
+    rrb->getBufferAsCloud(cloud, center);
 
     // convert to ROS message and publish
     sensor_msgs::PointCloud2 cloud2;
@@ -390,27 +313,24 @@ void timerCallback(const ros::TimerEvent& e)
 
 
     /* Free space cloud*/
-//    pcl::PointCloud<pcl::PointXYZ> free_cloud;
-//    Eigen::Vector3d center_fs;
-//    rrb.getBufferFSCloud(free_cloud, center_fs);
-//
-//    // convert to ROS message and publish
-//    sensor_msgs::PointCloud2 cloud2_fs;
-//    pcl::toROSMsg(free_cloud, cloud2_fs);
-//
-//    // message publish should have the same time stamp
-//    cloud2_fs.header.stamp = ros::Time::now();
-//    cloud2_fs.header.frame_id = "world";
-//    cloud_fs_pub.publish(cloud2_fs);
+    pcl::PointCloud<pcl::PointXYZ> free_cloud;
+    Eigen::Vector3d center_fs;
+    rrb->getBufferFSCloud(free_cloud, center_fs);
+
+    // convert to ROS message and publish
+    sensor_msgs::PointCloud2 cloud2_fs;
+    pcl::toROSMsg(free_cloud, cloud2_fs);
+
+    // message publish should have the same time stamp
+    cloud2_fs.header.stamp = ros::Time::now();
+    cloud2_fs.header.frame_id = "world";
+    cloud_fs_pub.publish(cloud2_fs);
 
 
     /* Semantic cloud */
     pcl::PointCloud<pcl::PointXYZI> semantic_cloud;
     Eigen::Vector3d center_s;
-    // rrb->getBufferSemanticCloud(semantic_cloud, center_s, direction_x, direction_y);
-    rrb.getBufferObstacleSemanticCloud(semantic_cloud, center_s, direction_x, direction_y);
-    // rrb.getBufferDynamicObstacleCloud(semantic_cloud, center_s, direction_x, direction_y);
-
+    rrb->getBufferSemanticCloud(semantic_cloud, center_s, direction_x, direction_y);
 
     // convert to ROS message and publish
     sensor_msgs::PointCloud2 cloud2_semantic;
@@ -424,10 +344,10 @@ void timerCallback(const ros::TimerEvent& e)
 
     //publish center
     geometry_msgs::PointStamped center_p;
-    center_p.header = cloud2_semantic.header;
-    center_p.point.x = center_s(0);
-    center_p.point.y = center_s(1);
-    center_p.point.z = center_s(2);
+    center_p.header = cloud2_fs.header;
+    center_p.point.x = center_fs(0);
+    center_p.point.y = center_fs(1);
+    center_p.point.z = center_fs(2);
     center_pub.publish(center_p);
 
      /* Write */
@@ -458,12 +378,12 @@ void timerCallback(const ros::TimerEvent& e)
 
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "mapping");
+    ros::init(argc, argv, "static_mapping");
     ros::NodeHandle nh;
 
     // ringbuffer cloud2
     cloud2_pub = nh.advertise<sensor_msgs::PointCloud2>("ring_buffer/cloud_ob", 1, true);
-    // cloud_fs_pub = nh.advertise<sensor_msgs::PointCloud2>("ring_buffer/cloud_fs", 1, true);
+    cloud_fs_pub = nh.advertise<sensor_msgs::PointCloud2>("ring_buffer/cloud_fs", 1, true);
     cloud_semantic_pub = nh.advertise<sensor_msgs::PointCloud2>("ring_buffer/cloud_semantic", 1, true); //CHG
     center_pub = nh.advertise<geometry_msgs::PointStamped>("ring_buffer/center",1,true) ;
 
@@ -479,7 +399,7 @@ int main(int argc, char** argv)
     sync.registerCallback(boost::bind(&odomCloudCallback, _1, _2));
 
     // subscribe RGB image detection result. Delay is ignored!!! CHG
-    ros::Subscriber detection_sub = nh.subscribe("/darknet_ros/bounding_boxes", 2, objectsCallback);
+    ros::Subscriber detection_sub = nh.subscribe("/objects", 2, objectsCallback);
     ros::Subscriber direction_sub =  nh.subscribe("/firefly/s_vec_init", 2, directionCallback);
     ros::Subscriber keyboard_sub =  nh.subscribe("/keyboard/twist", 2, keyboardCallback);
 
@@ -491,8 +411,8 @@ int main(int argc, char** argv)
     ros::Duration(0.5).sleep();
 
     // setup ring buffer
-//    rrb = ewok::EuclideanDistanceNormalRingBuffer<POW>::Ptr(
-//        new ewok::EuclideanDistanceNormalRingBuffer<POW>(resolution, 1.0));
+    rrb = ewok::EuclideanDistanceNormalRingBuffer<POW>::Ptr(
+        new ewok::EuclideanDistanceNormalRingBuffer<POW>(resolution, 1.0));
 
     _last_time = ros::Time::now();
     std::cout << "Start mapping!" << std::endl;

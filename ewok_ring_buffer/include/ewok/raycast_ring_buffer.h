@@ -148,39 +148,6 @@ class RaycastRingBuffer {
               }
           }
       }
-
-//      std::cout << "I am bot 001\n";
-//      std::cout << min_idx(0) << ", " << max_idx(0) <<","<< min_idx(1) <<","<< max_idx(1)<<","<<min_idx(2) << ","<<max_idx(2)<<std::endl;
-//
-//      // Iterate over all marked voxels and update
-//      for (int x = min_idx(0); x <= max_idx(0); ++x) {
-//          for (int y = min_idx(1); y <= max_idx(1); ++y) {
-//              for (int z = min_idx(2); z <= max_idx(2); ++z) {
-//
-//                  Vector3i idx(x, y, z);
-//
-//                  if (flag_buffer_.at(idx) & occupied_flag) {  // if is occupied
-//
-//                      _Datatype &occupancy_data = occupancy_buffer_.at(idx);
-//
-//                      bool was_occupied = isOccupied(occupancy_data);
-//                      addHitDynamic(occupancy_data);
-//                      bool is_occupied = isOccupied(occupancy_data);
-//
-//                      flag_buffer_.at(idx) &= ~insertion_flags;
-//
-//                      if (was_occupied != is_occupied) {
-//                          flag_buffer_.at(idx) |= updated_flag;
-//
-//                          updated_min_ = updated_min_.array().min(idx.array());
-//                          updated_max_ = updated_max_.array().max(idx.array());
-//                      }
-//
-//                  }
-//              }
-//          }
-//      }
-
   }
 
   void insertPointCloud(const PointCloud &cloud, const Vector3 &origin) {

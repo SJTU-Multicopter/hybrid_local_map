@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(secure_flying)
 
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-add_definitions(-std=c++11 -g -O1 -ftree-vectorize -march=native)
+add_definitions(-std=c++11 -g -O3 -ftree-vectorize -march=native)
 # find_package(catkin_simple REQUIRED)
 
 find_package(catkin REQUIRED COMPONENTS
@@ -29,7 +29,8 @@ include_directories(${PROJECT_SOURCE_DIR}/../ewok_poly_spline/include)
 #target_link_libraries(sim_flying ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${CHOLMOD_LIBRARY} 
 #/usr/local/lib/libnlopt.so.0.9.0)
 
+add_executable(static_mapping src/static_mapping.cpp)
+target_link_libraries(static_mapping ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+
 add_executable(mapping src/mapping.cpp)
 target_link_libraries(mapping ${PCL_LIBRARIES} ${catkin_LIBRARIES})
-
-

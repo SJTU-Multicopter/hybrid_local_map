@@ -75,7 +75,6 @@ class EuclideanDistanceNormalRingBuffer
        
             // add label and posibility
             for(int i = 0; i < int(points.size()); ++i)
-            //for(int i = 0; i < cloud_label.points.size(); ++i)
             {
                 Vector3 p;
                 Vector3i idx; ///CHG
@@ -95,12 +94,13 @@ class EuclideanDistanceNormalRingBuffer
                     }
                     else  // A different label comes
                     {
-                        if(label_temp == 3 && semantic_label_.at(idx) > 3) // 3: ordinary obstacle, reduce possibility
+                        if(label_temp == 3 && semantic_label_.at(idx) > 3) // label_temp == 3: ordinary obstacle, reduce possibility
                         {
                             if(label_possibility_.at(idx) > inverse_threshold)
+                            {
                                 label_possibility_.at(idx) -= decay_step; // decay by time
-
-                            if(label_possibility_.at(idx) <= inverse_threshold)
+                            }
+                            else if(label_possibility_.at(idx) <= inverse_threshold)
                             {
                                 semantic_label_.at(idx) = 3; // 3: ordinary obstacle
                                 label_possibility_.at(idx) = start_line;
@@ -125,65 +125,16 @@ class EuclideanDistanceNormalRingBuffer
                     }
                 }
             }
+
+            objects_updated = false;
         }
 
-        objects_updated = false;
+
     }
 
-    // Add normal updating
-    void insertPointCloudNormal(const pcl::PointCloud<pcl::PointNormal> &pn)
-    {
-        std::vector<pcl::PointNormal, Eigen::aligned_allocator<pcl::PointNormal>> points = pn.points;
-        // add normal to belonging voxel
-        for(int i = 0; i < int(points.size()); ++i)
-        {
-            Vector3 p;
-            Vector3i idx; ///CHG
-            p(0) = points.at(i).x;
-            p(1) = points.at(i).y;
-            p(2) = points.at(i).z;
-            norm_buffer_x_.getIdx(p, idx);
-            if(norm_buffer_x_.insideVolume(idx))
-            {
-                norm_buffer_x_.at(idx) += points.at(i).normal_x;
-                norm_buffer_y_.at(idx) += points.at(i).normal_y;
-                norm_buffer_z_.at(idx) += points.at(i).normal_z;
-            }
-        }
 
-        // normalize all normal
-        Vector3i off;
-        norm_buffer_x_.getOffset(off);
-        for(int x = 0; x < _N; x++)
-        {
-            for(int y = 0; y < _N; y++)
-            {
-                for(int z = 0; z < _N; z++)
-                {
-                    Vector3i coord(x, y, z);
-                    coord += off;
-                    if(occupancy_buffer_.isOccupied(coord))
-                    {
-                        float norm = sqrt(pow(norm_buffer_x_.at(coord), 2) + pow(norm_buffer_y_.at(coord), 2) +
-                                          pow(norm_buffer_z_.at(coord), 2));
-                        if(norm < 1e-3)
-                            norm_buffer_x_.at(coord) = norm_buffer_y_.at(coord) = norm_buffer_z_.at(coord) = 0.0;
-                        else
-                        {
-                            norm_buffer_x_.at(coord) /= norm;
-                            norm_buffer_y_.at(coord) /= norm;
-                            norm_buffer_z_.at(coord) /= norm;
-                        }
 
-                        // std::cout << "Normal at " << coord.transpose() << " is:" << norm_buffer_x_.at(coord) << ","
-                        //           << norm_buffer_y_.at(coord) << "," << norm_buffer_z_.at(coord) << std::endl;
-                    }
-                }
-            }
-        }
-    }
-
-    // Add normal offset
+    // Add offset
     virtual void setOffset(const Vector3i &off)
     {
         occupancy_buffer_.setOffset(off);
@@ -195,7 +146,7 @@ class EuclideanDistanceNormalRingBuffer
         label_possibility_.setOffset(off);
     }
 
-    // Add normal moveVolume
+    // Add moveVolume
     virtual void moveVolume(const Vector3i &direction)
     {
         occupancy_buffer_.moveVolume(direction);
@@ -240,27 +191,6 @@ class EuclideanDistanceNormalRingBuffer
                         pclp.z = p(2);
                         cloud.points.push_back(pclp);
                     }
-//                    bool occupied = false;
-//                    try {
-//                        occupied = occupancy_buffer_.isOccupied(coord);
-//                    }
-//                    catch(int id)
-//                    {
-//                        std::cout<<"Error "<< id << std::endl;
-//                        continue;
-//                    }
-//
-//                    if(occupied) //chg, problem
-//                    {
-//                        Vector3 p;
-//                        getPoint(coord, p);
-//                        pcl::PointXYZ pclp;
-//                        pclp.x = p(0);
-//                        pclp.y = p(1);
-//                        pclp.z = p(2);
-//                        cloud.points.push_back(pclp);
-//                    }
-
                 }
             }
         }
