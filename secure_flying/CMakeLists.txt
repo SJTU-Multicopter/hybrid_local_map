@@ -34,3 +34,6 @@ target_link_libraries(static_mapping ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 
 add_executable(mapping src/mapping.cpp)
 target_link_libraries(mapping ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+
+add_executable(mapping_turtlebot src/mapping_turtlebot.cpp)
+target_link_libraries(mapping_turtlebot ${PCL_LIBRARIES} ${catkin_LIBRARIES})

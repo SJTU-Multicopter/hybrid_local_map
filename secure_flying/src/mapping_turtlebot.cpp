@@ -35,7 +35,7 @@ ros::Time _last_time;
 ros::Time _data_input_time;
 
 bool initialized = false;
-const double resolution = 0.1;
+const double resolution = 0.2;
 
 static const int POW = 7; // 7: 12.8m
 static const int N = (1 << POW);
@@ -541,11 +541,11 @@ int main(int argc, char** argv)
     // message_filters::Subscriber<nav_msgs::Odometry> odom_sub(nh, "/zed/odom", 1);
     // message_filters::Subscriber<sensor_msgs::PointCloud2> pcl_sub(nh, "/zed/point_cloud/cloud_registered", 1);
 
-    message_filters::Subscriber<nav_msgs::Odometry> odom_sub(nh, "/firefly/ground_truth/odometry", 1);
-    message_filters::Subscriber<sensor_msgs::PointCloud2> pcl_sub(nh, "/firefly/vi_sensor/camera_depth/depth/points", 1);
+    message_filters::Subscriber<nav_msgs::Odometry> odom_sub(nh, "/odom", 1);
+    message_filters::Subscriber<sensor_msgs::PointCloud2> pcl_sub(nh, "/camera/depth/points", 1);
 
     typedef sync_policies::ApproximateTime<nav_msgs::Odometry, sensor_msgs::PointCloud2> MySyncPolicy;
-    Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), odom_sub, pcl_sub);
+    Synchronizer<MySyncPolicy> sync(MySyncPolicy(50), odom_sub, pcl_sub);
     sync.registerCallback(boost::bind(&odomCloudCallback, _1, _2));
 
     // subscribe RGB image detection result. Delay is ignored!!! CHG
