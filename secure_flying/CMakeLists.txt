@@ -8,10 +8,14 @@ add_definitions(-std=c++11 -g -O3 -ftree-vectorize -march=native)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   message_filters
+  cv_bridge
+  sensor_msgs
+  image_transport
 )
 
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
+find_package(OpenCV REQUIRED)
 #find_package(SuiteSparse REQUIRED)
 
 add_definitions(${PCL_DEFINITIONS})
@@ -24,6 +28,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/../ewok_ring_buffer/include)
 include_directories(${PROJECT_SOURCE_DIR}/../ewok_optimization/include)
 include_directories(${PROJECT_SOURCE_DIR}/../ewok_poly_spline/include)
+include_directories(${OpenCV_INCLUDE_DIRS})
 
 #add_executable(sim_flying src/sim_flying.cpp)
 #target_link_libraries(sim_flying ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${CHOLMOD_LIBRARY} 
@@ -37,3 +42,6 @@ target_link_libraries(mapping ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 
 add_executable(mapping_turtlebot src/mapping_turtlebot.cpp)
 target_link_libraries(mapping_turtlebot ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+
+add_executable(lantern src/lantern.cpp)
+target_link_libraries(lantern ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
