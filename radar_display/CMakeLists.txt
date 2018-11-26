@@ -15,4 +15,7 @@ ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS}
 add_executable(radar src/radar.cpp)
 target_link_libraries(radar ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
+add_executable(global_path src/global_path.cpp)
+target_link_libraries(global_path ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+
 
