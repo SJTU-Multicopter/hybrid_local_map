@@ -25,7 +25,7 @@
 #include <iostream>
 #include <string>
 #include <fstream>
-
+#include <cmath>
 
 using namespace message_filters;
 using namespace std;
@@ -60,6 +60,9 @@ double direction_x = 1.0;
 double direction_y = 0.0;
 int control_label = 0;
 int save_counter = 0;
+
+double useful_dist = 6.4;
+
 
 typedef struct LabeledObjects
 {
@@ -298,6 +301,8 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
                 }
 
             }
+
+            if(object_z > useful_dist) continue; // if too far beyond map range, abort
 
             for(int x = semantic_objects[i].tl_x; x <= semantic_objects[i].br_x; x++)
             {
@@ -565,6 +570,10 @@ int main(int argc, char** argv)
 //        new ewok::EuclideanDistanceNormalRingBuffer<POW>(resolution, 1.0));
 
     _last_time = ros::Time::now();
+
+    useful_dist = pow(2, POW-1)/10.0;
+    std::cout<<"useful_dist = "<< useful_dist << std::endl;
+
     std::cout << "Start mapping!" << std::endl;
 
     ros::spin();
