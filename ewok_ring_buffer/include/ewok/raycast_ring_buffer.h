@@ -52,8 +52,8 @@ class RaycastRingBuffer {
   static constexpr double min_val = -2;
   static constexpr double max_val = 3.5;
 
-  static constexpr double hit = 0.85;
-  static constexpr double miss = -0.8; // Origin -0.4, chg
+  static constexpr double hit = 0.6; // Origin 0.85, chg
+  static constexpr double miss = -1.0; // Origin -0.4, chg
 
   static constexpr _Datatype datatype_max = std::numeric_limits<_Datatype>::max(); // 32767
   static constexpr _Datatype datatype_min = std::numeric_limits<_Datatype>::min();  // minimum(not lowest), positive

@@ -52,11 +52,11 @@ int main(int argc, char **argv)
 
 	namedWindow( "Compass", CV_WINDOW_AUTOSIZE );
 
-	ros::Publisher target_pos_pub = n.advertise<geometry_msgs::Point>("target_point", 1);
-	ros::Publisher current_pos_pub = n.advertise<geometry_msgs::Point>("current_point", 1);
-	ros::Publisher target_yaw_pub = n.advertise<std_msgs::Float64>("target_yaw", 1);
-	ros::Publisher current_yaw_pub = n.advertise<std_msgs::Float64>("current_yaw", 1);
-	ros::Publisher delt_yaw_pub = n.advertise<std_msgs::Float64>("delt_yaw", 1);
+	ros::Publisher target_pos_pub = n.advertise<geometry_msgs::Point>("/radar/target_point", 1);  // Gloabl coordinate, not robot odom coord
+	ros::Publisher current_pos_pub = n.advertise<geometry_msgs::Point>("/radar/current_point", 1); // Gloabl coordinate, not robot odom coord
+	ros::Publisher target_yaw_pub = n.advertise<std_msgs::Float64>("/radar/target_yaw", 1); // Gloabl coordinate, same with robot odom coord
+	ros::Publisher current_yaw_pub = n.advertise<std_msgs::Float64>("/radar/current_yaw", 1);
+	ros::Publisher delt_yaw_pub = n.advertise<std_msgs::Float64>("/radar/delt_yaw", 1);
 
 	std_msgs::Float64 target_yaw;
 	std_msgs::Float64 current_yaw;
@@ -142,7 +142,7 @@ int main(int argc, char **argv)
     	/* Draw radar */
     	Mat img(300, 300, CV_8UC3, Scalar(0,0,0));
     	Point p(150, 150);
-    	circle(img, p, 100, Scalar(0, 255, 0), 3);
+    	circle(img, p, 60, Scalar(0, 255, 0), 10);
     	circle(img, p, 5, Scalar(0, 0, 255), 3);
     	line(img, Point(150, 270), Point(150, 30), Scalar(255, 20, 0), 3);
     	line(img, Point(140, 40), Point(150, 30), Scalar(255, 20, 0), 3);

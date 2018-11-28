@@ -37,7 +37,7 @@ class EuclideanDistanceNormalRingBuffer
       , norm_buffer_x_(resolution, _Datatype(0))
       , norm_buffer_y_(resolution, _Datatype(0))
       , norm_buffer_z_(resolution, _Datatype(0))
-      , semantic_label_(resolution, _Flag(0)) //CHG
+      , semantic_label_(resolution, _Flag(1)) //CHG 1: unknown space
       , label_possibility_(resolution, _Flag(0)) //CHG
     {
         distance_buffer_.setEmptyElement(std::numeric_limits<_Scalar>::max());
@@ -106,12 +106,12 @@ class EuclideanDistanceNormalRingBuffer
                                 label_possibility_.at(idx) = start_line;
                             }
                         }
-                        else if(label_temp == 3 && semantic_label_.at(idx) < 3) // Original value is 0, free space is 2, set as ordinary obstacle: 3
+                        else if(label_temp == 3 && semantic_label_.at(idx) < 3) // Original value is 1(Unknown), free space is 1, set as ordinary obstacle: 3
                         {
                             semantic_label_.at(idx) = 3;
                             label_possibility_.at(idx) = start_line;
                         }
-                        else if(label_temp == 0)
+                        else if(label_temp == 0) // Impossiple??
                         {
                             if(label_possibility_.at(idx) > decay_step)
                                 label_possibility_.at(idx) -= decay_step; // decay by time
@@ -246,27 +246,28 @@ class EuclideanDistanceNormalRingBuffer
                         pclp.x = p(0);
                         pclp.y = p(1);
                         pclp.z = p(2);
+                        pclp.intensity = 0.0;
 
-                        // Consider x, y plain for fly direction
-                        double temp_x = pclp.x - center(0);
-                        double temp_y = pclp.y - center(1);
+                        // // Consider x, y plain for fly direction
+                        // double temp_x = pclp.x - center(0);
+                        // double temp_y = pclp.y - center(1);
 
-                        double temp_len = sqrt(temp_x * temp_x + temp_y * temp_y);
-                        double x_norm = temp_x / temp_len;
-                        double y_norm = temp_y / temp_len;
+                        // double temp_len = sqrt(temp_x * temp_x + temp_y * temp_y);
+                        // double x_norm = temp_x / temp_len;
+                        // double y_norm = temp_y / temp_len;
 
-                        if(x_norm * dir_x + y_norm * dir_y > 0.8)
-                        {
-                            semantic_label_.at(coord) = 1; //Free space target
-                            label_possibility_.at(coord) = 5;
-                            pclp.intensity = 1;
-                        }
-                        else
-                        {
-                            semantic_label_.at(coord) = 2; //Free space
-                            label_possibility_.at(coord) = 5;
-                            pclp.intensity = 2;
-                        }
+                        // if(x_norm * dir_x + y_norm * dir_y > 0.8)
+                        // {
+                        //     semantic_label_.at(coord) = 1; //Free space target
+                        //     label_possibility_.at(coord) = 5;
+                        //     pclp.intensity = 1;
+                        // }
+                        // else
+                        // {
+                        //     semantic_label_.at(coord) = 2; //Free space
+                        //     label_possibility_.at(coord) = 5;
+                        //     pclp.intensity = 2;
+                        // }
                     
                         cloud.points.push_back(pclp);
                     }

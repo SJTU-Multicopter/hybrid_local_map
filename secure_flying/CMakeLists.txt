@@ -43,5 +43,4 @@ target_link_libraries(mapping ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 add_executable(mapping_turtlebot src/mapping_turtlebot.cpp)
 target_link_libraries(mapping_turtlebot ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 
-add_executable(lantern src/lantern.cpp)
-target_link_libraries(lantern ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+

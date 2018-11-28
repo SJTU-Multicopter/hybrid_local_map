@@ -138,24 +138,38 @@ void objectsCallback(const darknet_ros_msgs::BoundingBoxes& objects)
     for (int m = 0; m < objects.bounding_boxes.size(); m++)
     {
         unsigned char label;
+        /*
+        0: free space
+        1: unknown
+        2: possible way
+        3: obstacle
+        4: none
+        5: furniture
+        6: other dynamic objects
+        7: person
+        */
         if(objects.bounding_boxes[m].Class == "person")
-            label = 5;
+            label = 7;
         else if(objects.bounding_boxes[m].Class == "cat")
-            label = 5;
+            label = 6;
         else if(objects.bounding_boxes[m].Class == "dog")
-            label = 5;
+            label = 6;
         else if(objects.bounding_boxes[m].Class == "laptop")
-            label = 4;
+            label = 5;
         else if(objects.bounding_boxes[m].Class == "bed")
-            label = 4;
+            label = 5;
         else if(objects.bounding_boxes[m].Class == "tvmonitor")
-            label = 4;
+            label = 5;
         else if(objects.bounding_boxes[m].Class == "chair")
-            label = 4;
+            label = 5;
         else if(objects.bounding_boxes[m].Class == "diningtable")
-            label = 4;
+            label = 5;
         else if(objects.bounding_boxes[m].Class == "sofa")
-            label = 4;
+            label = 5;
+        else if(objects.bounding_boxes[m].Class == "window")
+            label = 2;
+        else if(objects.bounding_boxes[m].Class == "door")
+            label = 2;
         else
             label = 3;
 
@@ -274,7 +288,7 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
     // NOTE: coordinates are different between camera and grid map
     for(int i = 0; i < semantic_objects.size(); i++)
     {
-        if(semantic_objects[i].label > 4) // Dynamic objects
+        if(semantic_objects[i].label > 5) // Dynamic objects
         {
             // Find the center of the dynamic objects
             int mid_x = (semantic_objects[i].tl_x + semantic_objects[i].br_x) / 2;
@@ -482,8 +496,8 @@ void timerCallback(const ros::TimerEvent& e)
     /* Semantic cloud */
     pcl::PointCloud<pcl::PointXYZI> semantic_cloud;
     Eigen::Vector3d center_s;
-    // rrb->getBufferSemanticCloud(semantic_cloud, center_s, direction_x, direction_y);
-    rrb.getBufferObstacleSemanticCloud(semantic_cloud, center_s, direction_x, direction_y);
+    rrb.getBufferSemanticCloud(semantic_cloud, center_s, direction_x, direction_y);
+    // rrb.getBufferObstacleSemanticCloud(semantic_cloud, center_s, direction_x, direction_y);
     // rrb.getBufferDynamicObstacleCloud(semantic_cloud, center_s, direction_x, direction_y);
 
 
