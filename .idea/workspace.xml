@@ -2,90 +2,94 @@
 <project version="4">
   <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true" buildAllGenerated="true">
     <generated>
-      <config projectName="Project" targetName="gmock" />
-      <config projectName="Project" targetName="std_srvs_generate_messages_lisp" />
-      <config projectName="Project" targetName="sensor_msgs_generate_messages_eus" />
-      <config projectName="Project" targetName="geometry_msgs_generate_messages_lisp" />
-      <config projectName="Project" targetName="darknet_ros_object_detection-test" />
-      <config projectName="Project" targetName="run_tests" />
-      <config projectName="Project" targetName="actionlib_msgs_generate_messages_nodejs" />
-      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_py" />
-      <config projectName="Project" targetName="std_msgs_generate_messages_lisp" />
-      <config projectName="Project" targetName="darknet_ros_msgs_geneus" />
-      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_eus" />
-      <config projectName="Project" targetName="mapping" />
-      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsGoal" />
-      <config projectName="Project" targetName="std_srvs_generate_messages_nodejs" />
-      <config projectName="Project" targetName="download_extra_data" />
-      <config projectName="Project" targetName="run_tests_darknet_ros_rostest_test_object_detection.test" />
-      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsActionResult" />
-      <config projectName="Project" targetName="actionlib_msgs_generate_messages_eus" />
-      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_eus" />
-      <config projectName="Project" targetName="gtest_main" />
-      <config projectName="Project" targetName="tests" />
-      <config projectName="Project" targetName="std_msgs_generate_messages_eus" />
-      <config projectName="Project" targetName="roscpp_generate_messages_lisp" />
-      <config projectName="Project" targetName="std_srvs_generate_messages_eus" />
-      <config projectName="Project" targetName="_run_tests_darknet_ros_rostest" />
-      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_nodejs" />
+      <config projectName="Project" targetName="_run_tests_darknet_ros" />
+      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_BoundingBox" />
       <config projectName="Project" targetName="roscpp_generate_messages_py" />
-      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsResult" />
-      <config projectName="Project" targetName="actionlib_generate_messages_eus" />
-      <config projectName="Project" targetName="darknet_ros_msgs_genpy" />
-      <config projectName="Project" targetName="clean_test_results" />
-      <config projectName="Project" targetName="darknet_ros_msgs_gencpp" />
-      <config projectName="Project" targetName="actionlib_msgs_generate_messages_lisp" />
-      <config projectName="Project" targetName="sensor_msgs_generate_messages_lisp" />
-      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_lisp" />
-      <config projectName="Project" targetName="darknet_ros" />
-      <config projectName="Project" targetName="actionlib_generate_messages_cpp" />
-      <config projectName="Project" targetName="geometry_msgs_generate_messages_cpp" />
-      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsActionFeedback" />
-      <config projectName="Project" targetName="actionlib_msgs_generate_messages_py" />
-      <config projectName="Project" targetName="gtest" />
-      <config projectName="Project" targetName="gmock_main" />
-      <config projectName="Project" targetName="std_srvs_generate_messages_py" />
-      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsActionGoal" />
-      <config projectName="Project" targetName="actionlib_generate_messages_py" />
-      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_BoundingBoxes" />
-      <config projectName="Project" targetName="roscpp_generate_messages_cpp" />
-      <config projectName="Project" targetName="std_srvs_generate_messages_cpp" />
-      <config projectName="Project" targetName="actionlib_generate_messages_lisp" />
+      <config projectName="Project" targetName="darknet_ros_lib" />
+      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsActionResult" />
+      <config projectName="Project" targetName="darknet_ros_msgs_geneus" />
       <config projectName="Project" targetName="sensor_msgs_generate_messages_nodejs" />
-      <config projectName="Project" targetName="darknet_ros_msgs_genlisp" />
-      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsAction" />
-      <config projectName="Project" targetName="actionlib_generate_messages_nodejs" />
-      <config projectName="Project" targetName="static_mapping" />
-      <config projectName="Project" targetName="std_msgs_generate_messages_nodejs" />
-      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsFeedback" />
       <config projectName="Project" targetName="std_msgs_generate_messages_cpp" />
+      <config projectName="Project" targetName="actionlib_generate_messages_nodejs" />
+      <config projectName="Project" targetName="clean_test_results" />
+      <config projectName="Project" targetName="lantern" />
+      <config projectName="Project" targetName="gtest" />
+      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_cpp" />
+      <config projectName="Project" targetName="std_msgs_generate_messages_nodejs" />
+      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsGoal" />
+      <config projectName="Project" targetName="geometry_msgs_generate_messages_cpp" />
+      <config projectName="Project" targetName="darknet_ros_object_detection-test" />
+      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_cpp" />
+      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_lisp" />
       <config projectName="Project" targetName="sensor_msgs_generate_messages_py" />
-      <config projectName="Project" targetName="doxygen" />
-      <config projectName="Project" targetName="roscpp_generate_messages_eus" />
+      <config projectName="Project" targetName="std_srvs_generate_messages_nodejs" />
+      <config projectName="Project" targetName="geometry_msgs_generate_messages_lisp" />
+      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_py" />
       <config projectName="Project" targetName="std_msgs_generate_messages_py" />
       <config projectName="Project" targetName="darknet_ros_msgs_generate_messages" />
-      <config projectName="Project" targetName="usb_cam_node" />
-      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_BoundingBox" />
-      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_nodejs" />
-      <config projectName="Project" targetName="geometry_msgs_generate_messages_eus" />
-      <config projectName="Project" targetName="run_tests_darknet_ros_rostest" />
-      <config projectName="Project" targetName="sensor_msgs_generate_messages_cpp" />
-      <config projectName="Project" targetName="_run_tests_darknet_ros" />
-      <config projectName="Project" targetName="usb_cam" />
+      <config projectName="Project" targetName="gmock" />
+      <config projectName="Project" targetName="actionlib_msgs_generate_messages_eus" />
+      <config projectName="Project" targetName="roscpp_generate_messages_eus" />
+      <config projectName="Project" targetName="doxygen" />
+      <config projectName="Project" targetName="darknet_ros_msgs_gencpp" />
+      <config projectName="Project" targetName="tests" />
+      <config projectName="Project" targetName="std_msgs_generate_messages_eus" />
+      <config projectName="Project" targetName="darknet_ros_msgs_genpy" />
+      <config projectName="Project" targetName="actionlib_msgs_generate_messages_lisp" />
+      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_eus" />
       <config projectName="Project" targetName="_catkin_empty_exported_target" />
-      <config projectName="Project" targetName="geometry_msgs_generate_messages_nodejs" />
-      <config projectName="Project" targetName="_run_tests_darknet_ros_rostest_test_object_detection.test" />
-      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_cpp" />
-      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_py" />
-      <config projectName="Project" targetName="darknet_ros_msgs_gennodejs" />
-      <config projectName="Project" targetName="run_tests_darknet_ros" />
-      <config projectName="Project" targetName="darknet_ros_lib" />
+      <config projectName="Project" targetName="std_srvs_generate_messages_py" />
+      <config projectName="Project" targetName="actionlib_generate_messages_py" />
+      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_nodejs" />
+      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_nodejs" />
+      <config projectName="Project" targetName="run_tests_darknet_ros_rostest_test_object_detection.test" />
+      <config projectName="Project" targetName="actionlib_generate_messages_eus" />
       <config projectName="Project" targetName="clean_test_results_darknet_ros" />
-      <config projectName="Project" targetName="actionlib_msgs_generate_messages_cpp" />
-      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_lisp" />
-      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_cpp" />
+      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_eus" />
       <config projectName="Project" targetName="roscpp_generate_messages_nodejs" />
+      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_BoundingBoxes" />
+      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_py" />
+      <config projectName="Project" targetName="download_extra_data" />
+      <config projectName="Project" targetName="global_path" />
+      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsFeedback" />
+      <config projectName="Project" targetName="run_tests" />
+      <config projectName="Project" targetName="std_srvs_generate_messages_cpp" />
       <config projectName="Project" targetName="geometry_msgs_generate_messages_py" />
+      <config projectName="Project" targetName="geometry_msgs_generate_messages_nodejs" />
+      <config projectName="Project" targetName="mapping" />
+      <config projectName="Project" targetName="roscpp_generate_messages_cpp" />
+      <config projectName="Project" targetName="actionlib_generate_messages_lisp" />
+      <config projectName="Project" targetName="actionlib_msgs_generate_messages_cpp" />
+      <config projectName="Project" targetName="actionlib_msgs_generate_messages_nodejs" />
+      <config projectName="Project" targetName="actionlib_msgs_generate_messages_py" />
+      <config projectName="Project" targetName="sensor_msgs_generate_messages_eus" />
+      <config projectName="Project" targetName="darknet_ros" />
+      <config projectName="Project" targetName="mapping_turtlebot" />
+      <config projectName="Project" targetName="std_msgs_generate_messages_lisp" />
+      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsActionFeedback" />
+      <config projectName="Project" targetName="darknet_ros_msgs_gennodejs" />
+      <config projectName="Project" targetName="sensor_msgs_generate_messages_lisp" />
+      <config projectName="Project" targetName="actionlib_generate_messages_cpp" />
+      <config projectName="Project" targetName="_run_tests_darknet_ros_rostest" />
+      <config projectName="Project" targetName="gmock_main" />
+      <config projectName="Project" targetName="usb_cam" />
+      <config projectName="Project" targetName="std_srvs_generate_messages_lisp" />
+      <config projectName="Project" targetName="gtest_main" />
+      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsResult" />
+      <config projectName="Project" targetName="run_tests_darknet_ros" />
+      <config projectName="Project" targetName="std_srvs_generate_messages_eus" />
+      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsActionGoal" />
+      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_lisp" />
+      <config projectName="Project" targetName="radar" />
+      <config projectName="Project" targetName="_run_tests_darknet_ros_rostest_test_object_detection.test" />
+      <config projectName="Project" targetName="darknet_ros_msgs_genlisp" />
+      <config projectName="Project" targetName="sensor_msgs_generate_messages_cpp" />
+      <config projectName="Project" targetName="run_tests_darknet_ros_rostest" />
+      <config projectName="Project" targetName="roscpp_generate_messages_lisp" />
+      <config projectName="Project" targetName="static_mapping" />
+      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsAction" />
+      <config projectName="Project" targetName="usb_cam_node" />
+      <config projectName="Project" targetName="geometry_msgs_generate_messages_eus" />
     </generated>
   </component>
   <component name="CMakeSettings">
@@ -99,8 +103,9 @@
       <change beforePath="$PROJECT_DIR$/darknet_ros" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/darknet_ros/darknet" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros/darknet" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/darknet_ros/darknet_ros/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros/darknet_ros/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/darknet_ros/darknet_ros/config/ros.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros/darknet_ros/config/ros.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/secure_flying/src/mapping.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/secure_flying/src/mapping.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h" beforeDir="false" afterPath="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h" beforeDir="false" afterPath="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/secure_flying/src/mapping_turtlebot.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/secure_flying/src/mapping_turtlebot.cpp" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <ignored path="$PROJECT_DIR$/../cmake-build-debug/" />
@@ -125,42 +130,23 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="375">
-      <file leaf-file-name="mapping.cpp" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/secure_flying/src/mapping.cpp">
+      <file leaf-file-name="mapping_turtlebot.cpp" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/secure_flying/src/mapping_turtlebot.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="332">
-              <caret line="312" column="53" selection-start-line="312" selection-start-column="53" selection-end-line="312" selection-end-column="53" />
+            <state relative-caret-position="342">
+              <caret line="46" column="37" selection-start-line="46" selection-start-column="37" selection-end-line="46" selection-end-column="37" />
               <folding>
                 <element signature="e#0#36#0" expanded="true" />
-                <element signature="e#680#760#0" expanded="true" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="sim_flying.cpp" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/secure_flying/src/sim_flying.cpp">
+      <file leaf-file-name="CMakeLists.txt" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/secure_flying/CMakeLists.txt">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="570">
-              <caret line="51" column="34" selection-start-line="51" selection-start-column="6" selection-end-line="51" selection-end-column="34" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="point_cloud.h" pinned="false" current-in-tab="false">
-        <entry file="file:///usr/include/pcl-1.7/pcl/point_cloud.h">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="7771">
-              <caret line="409" column="61" selection-start-line="409" selection-start-column="61" selection-end-line="409" selection-end-column="61" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="ros.yaml" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/darknet_ros/darknet_ros/config/ros.yaml">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="228">
-              <caret line="12" selection-start-line="12" selection-end-line="12" />
+            <state relative-caret-position="38">
+              <caret line="2" lean-forward="true" selection-start-line="2" selection-end-line="2" />
             </state>
           </provider>
         </entry>
@@ -168,29 +154,29 @@
       <file leaf-file-name="ring_buffer_base.h" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ring_buffer_base.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="155">
+            <state relative-caret-position="589">
               <caret line="117" selection-start-line="117" selection-end-line="117" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="ed_nor_ring_buffer.h" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h">
+      <file leaf-file-name="raycast_ring_buffer.h" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="286">
-              <caret line="61" column="31" selection-start-line="61" selection-start-column="26" selection-end-line="61" selection-end-column="49" />
-              <folding>
-                <element signature="e#121#158#0" expanded="true" />
-              </folding>
+            <state relative-caret-position="-7998">
+              <caret line="54" column="56" lean-forward="true" selection-start-line="54" selection-start-column="56" selection-end-line="54" selection-end-column="56" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="raycast_ring_buffer.h" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h">
+      <file leaf-file-name="ed_nor_ring_buffer.h" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="60">
-              <caret line="17" column="46" lean-forward="true" selection-start-line="17" selection-start-column="46" selection-end-line="17" selection-end-column="46" />
+            <state relative-caret-position="287">
+              <caret line="272" column="21" lean-forward="true" selection-start-line="272" selection-start-column="21" selection-end-line="272" selection-end-column="21" />
+              <folding>
+                <element signature="e#121#158#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -209,7 +195,6 @@
       <find>cout</find>
       <find>insertPointCloudSemanticLabel</find>
       <find>push</find>
-      <find>camera_fx</find>
       <find>norm_buffer_x_</find>
       <find>cloud2_pub</find>
       <find>dir_x</find>
@@ -223,6 +208,10 @@
       <find>semantic_labels</find>
       <find>label_possibility_</find>
       <find>resolution</find>
+      <find>datatype_hit</find>
+      <find>addHit</find>
+      <find>datatype_min</find>
+      <find>camera_fx</find>
     </findStrings>
     <dirStrings>
       <dir>/usr/include/c++</dir>
@@ -239,11 +228,12 @@
         <option value="$PROJECT_DIR$/yolov3/CMakeLists.txt" />
         <option value="$PROJECT_DIR$/yolov3/src/src/detect_test.cpp" />
         <option value="$PROJECT_DIR$/CMakeLists.txt" />
-        <option value="$PROJECT_DIR$/secure_flying/CMakeLists.txt" />
-        <option value="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h" />
         <option value="$PROJECT_DIR$/secure_flying/src/static_mapping.cpp" />
-        <option value="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h" />
         <option value="$PROJECT_DIR$/secure_flying/src/mapping.cpp" />
+        <option value="$PROJECT_DIR$/secure_flying/CMakeLists.txt" />
+        <option value="$PROJECT_DIR$/secure_flying/src/mapping_turtlebot.cpp" />
+        <option value="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h" />
+        <option value="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h" />
       </list>
     </option>
   </component>
@@ -257,11 +247,11 @@
     <packageJsonPaths />
   </component>
   <component name="OCFindUsagesOptions" text="false" ivars="false" properties="true" derivedClasses="false" />
-  <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="1985" />
+  <component name="ProjectFrameBounds" extendedState="7">
+    <option name="x" value="2187" />
     <option name="y" value="-4" />
-    <option name="width" value="1855" />
-    <option name="height" value="1084" />
+    <option name="width" value="1853" />
+    <option name="height" value="1076" />
   </component>
   <component name="ProjectInspectionProfilesVisibleTreeState">
     <entry key="Project Default">
@@ -283,6 +273,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -306,21 +297,29 @@
               <item name="hybrid_local_map" type="47feb1d3:ProjectViewModuleNode" />
               <item name="src" type="462c0819:PsiDirectoryNode" />
               <item name="hybrid_local_map" type="462c0819:PsiDirectoryNode" />
-              <item name="secure_flying" type="462c0819:PsiDirectoryNode" />
+              <item name="ewok_ring_buffer" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="hybrid_local_map" type="b2602c69:ProjectViewProjectNode" />
               <item name="hybrid_local_map" type="47feb1d3:ProjectViewModuleNode" />
               <item name="src" type="462c0819:PsiDirectoryNode" />
               <item name="hybrid_local_map" type="462c0819:PsiDirectoryNode" />
-              <item name="secure_flying" type="462c0819:PsiDirectoryNode" />
+              <item name="ewok_ring_buffer" type="462c0819:PsiDirectoryNode" />
+              <item name="include" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="hybrid_local_map" type="b2602c69:ProjectViewProjectNode" />
+              <item name="hybrid_local_map" type="47feb1d3:ProjectViewModuleNode" />
               <item name="src" type="462c0819:PsiDirectoryNode" />
+              <item name="hybrid_local_map" type="462c0819:PsiDirectoryNode" />
+              <item name="ewok_ring_buffer" type="462c0819:PsiDirectoryNode" />
+              <item name="include" type="462c0819:PsiDirectoryNode" />
+              <item name="ewok" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -344,7 +343,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Application.mapping">
+  <component name="RunManager" selected="Application.mapping_turtlebot">
     <configuration name="Build All" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Project" RUN_TARGET_NAME="hybrid_local_map" EXPLICIT_BUILD_TARGET_NAME="all" />
     <configuration name="_catkin_empty_exported_target" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="_catkin_empty_exported_target" CONFIG_NAME="Debug" />
     <configuration name="_darknet_ros_msgs_generate_messages_check_deps_BoundingBox" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="_darknet_ros_msgs_generate_messages_check_deps_BoundingBox" CONFIG_NAME="Debug" />
@@ -392,11 +391,15 @@
     <configuration name="geometry_msgs_generate_messages_lisp" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="geometry_msgs_generate_messages_lisp" CONFIG_NAME="Debug" />
     <configuration name="geometry_msgs_generate_messages_nodejs" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="geometry_msgs_generate_messages_nodejs" CONFIG_NAME="Debug" />
     <configuration name="geometry_msgs_generate_messages_py" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="geometry_msgs_generate_messages_py" CONFIG_NAME="Debug" />
+    <configuration name="global_path" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="global_path" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Project" RUN_TARGET_NAME="global_path" />
     <configuration name="gmock" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="gmock" CONFIG_NAME="Debug" />
     <configuration name="gmock_main" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="gmock_main" CONFIG_NAME="Debug" />
     <configuration name="gtest" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="gtest" CONFIG_NAME="Debug" />
     <configuration name="gtest_main" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="gtest_main" CONFIG_NAME="Debug" />
+    <configuration name="lantern" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="lantern" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Project" RUN_TARGET_NAME="lantern" />
     <configuration name="mapping" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="mapping" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Project" RUN_TARGET_NAME="mapping" />
+    <configuration name="mapping_turtlebot" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="mapping_turtlebot" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Project" RUN_TARGET_NAME="mapping_turtlebot" />
+    <configuration name="radar" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="radar" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Project" RUN_TARGET_NAME="radar" />
     <configuration name="roscpp_generate_messages_cpp" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="roscpp_generate_messages_cpp" CONFIG_NAME="Debug" />
     <configuration name="roscpp_generate_messages_eus" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="roscpp_generate_messages_eus" CONFIG_NAME="Debug" />
     <configuration name="roscpp_generate_messages_lisp" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="roscpp_generate_messages_lisp" CONFIG_NAME="Debug" />
@@ -483,6 +486,9 @@
       <item itemvalue="Application.geometry_msgs_generate_messages_lisp" />
       <item itemvalue="Application.geometry_msgs_generate_messages_nodejs" />
       <item itemvalue="Application.geometry_msgs_generate_messages_py" />
+      <item itemvalue="Application.global_path" />
+      <item itemvalue="Application.lantern" />
+      <item itemvalue="Application.radar" />
       <item itemvalue="Application.sensor_msgs_generate_messages_cpp" />
       <item itemvalue="Application.sensor_msgs_generate_messages_eus" />
       <item itemvalue="Application.sensor_msgs_generate_messages_lisp" />
@@ -504,6 +510,7 @@
       <item itemvalue="Application.rosgraph_msgs_generate_messages_nodejs" />
       <item itemvalue="Application.rosgraph_msgs_generate_messages_py" />
       <item itemvalue="Application.mapping" />
+      <item itemvalue="Application.mapping_turtlebot" />
       <item itemvalue="Application.static_mapping" />
       <item itemvalue="Application.std_srvs_generate_messages_cpp" />
       <item itemvalue="Application.std_srvs_generate_messages_eus" />
@@ -553,11 +560,12 @@
       <workItem from="1540368362897" duration="39000" />
       <workItem from="1541228994845" duration="22736000" />
       <workItem from="1541496146866" duration="678000" />
+      <workItem from="1543556581080" duration="9911000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="53874000" />
+    <option name="totallyTimeSpent" value="63785000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -569,30 +577,30 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="1985" y="-4" width="1855" height="1084" extended-state="6" />
+    <frame x="1920" y="-4" width="1920" height="1084" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.21608315" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.1864765" />
       <window_info anchor="bottom" id="TODO" order="6" weight="0.32903227" />
+      <window_info anchor="bottom" id="Messages" order="7" weight="0.32795697" />
       <window_info anchor="bottom" id="CMake" order="11" weight="0.32903227" />
       <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" />
-      <window_info anchor="bottom" id="Run" order="2" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.13548388" />
       <window_info anchor="bottom" id="Version Control" order="10" weight="0.32903227" />
+      <window_info anchor="bottom" id="Run" order="2" visible="true" weight="0.29032257" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info anchor="bottom" id="Terminal" order="8" weight="0.3376344" />
-      <window_info anchor="bottom" id="Debug" order="3" weight="0.06236559" />
       <window_info id="Favorites" order="2" side_tool="true" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.1860215" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="Inspection Results" order="12" weight="0.32903227" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" id="Database" order="3" />
-      <window_info anchor="bottom" id="Messages" order="7" weight="0.26881722" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Database Changes" order="7" show_stripe_button="false" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
-      <window_info anchor="bottom" id="Find" order="1" visible="true" weight="0.13548388" />
     </layout>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -603,27 +611,10 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <option name="time" value="2" />
+      <option name="time" value="6" />
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ring_buffer_base.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2223">
-          <caret line="117" selection-start-line="117" selection-end-line="117" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="5225">
-          <caret line="275" column="47" lean-forward="true" selection-start-line="275" selection-start-column="47" selection-end-line="275" selection-end-column="47" />
-          <folding>
-            <element signature="e#121#158#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="2831">
@@ -864,13 +855,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/secure_flying/CMakeLists.txt">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="76">
-          <caret line="4" column="65" selection-start-line="4" selection-start-column="65" selection-end-line="4" selection-end-column="65" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/darknet_ros/darknet_ros/src/YoloObjectDetector.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-1036" />
@@ -907,8 +891,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/secure_flying/src/mapping.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="332">
-          <caret line="312" column="53" selection-start-line="312" selection-start-column="53" selection-end-line="312" selection-end-column="53" />
+        <state relative-caret-position="5956">
+          <caret line="575" selection-start-line="575" selection-end-line="575" />
           <folding>
             <element signature="e#0#36#0" expanded="true" />
             <element signature="e#680#760#0" expanded="true" />
@@ -918,32 +902,52 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/secure_flying/src/sim_flying.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="570">
-          <caret line="51" column="34" selection-start-line="51" selection-start-column="6" selection-end-line="51" selection-end-column="34" />
+        <state relative-caret-position="65">
+          <caret line="33" selection-start-line="33" selection-end-line="33" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../CMakeLists.txt">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/secure_flying/CMakeLists.txt">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="38">
+          <caret line="2" lean-forward="true" selection-start-line="2" selection-end-line="2" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ring_buffer_base.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="155">
+        <state relative-caret-position="589">
           <caret line="117" selection-start-line="117" selection-end-line="117" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h">
+    <entry file="file://$PROJECT_DIR$/secure_flying/src/mapping_turtlebot.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="286">
-          <caret line="61" column="31" selection-start-line="61" selection-start-column="26" selection-end-line="61" selection-end-column="49" />
+        <state relative-caret-position="342">
+          <caret line="46" column="37" selection-start-line="46" selection-start-column="37" selection-end-line="46" selection-end-column="37" />
           <folding>
-            <element signature="e#121#158#0" expanded="true" />
+            <element signature="e#0#36#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="60">
-          <caret line="17" column="46" lean-forward="true" selection-start-line="17" selection-start-column="46" selection-end-line="17" selection-end-column="46" />
+        <state relative-caret-position="-7998">
+          <caret line="54" column="56" lean-forward="true" selection-start-line="54" selection-start-column="56" selection-end-line="54" selection-end-column="56" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="287">
+          <caret line="272" column="21" lean-forward="true" selection-start-line="272" selection-start-column="21" selection-end-line="272" selection-end-column="21" />
+          <folding>
+            <element signature="e#121#158#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

@@ -41,10 +41,12 @@ static const int POW = 7; // 7: 12.8m
 static const int N = (1 << POW);
 static const int IMGWIDTH = 640; // !!!! CHG NOTE
 static const int IMGHEIGHT = 480;
-static const float camera_fx = 208.0; // !!!! CHG NOTE
-static const float camera_fy = 203.0;
-static const float camera_cx = 0.0; // !!!! CHG NOTE
-static const float camera_cy = 0.0;
+//static const float camera_fx = 208.0; // !!!! CHG NOTE
+//static const float camera_fy = 203.0;
+static const float camera_fx = 555.f; // !!!! CHG NOTE
+static const float camera_fy = 555.f;
+static const float camera_cx = 0.f; // !!!! CHG NOTE
+static const float camera_cy = 0.f;
 static const bool save_pcds = false;
 static const string save_path = "/home/clarence/workspace/PointCloud/Gazebo_PCD_Training_data/";
 
@@ -60,6 +62,9 @@ double direction_x = 1.0;
 double direction_y = 0.0;
 int control_label = 0;
 int save_counter = 0;
+
+float img_width_half = 0.f;
+float img_height_half = 0.f;
 
 double useful_dist = 6.4;
 
@@ -295,6 +300,8 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
             int mid_y = (semantic_objects[i].tl_y + semantic_objects[i].br_y) / 2;
 
             float object_z = cloud_in->points[mid_x + mid_y * IMGWIDTH].z;
+            if(object_z != object_z) object_z = 100.f; // NAN issue
+
             int rect_length_half = 3;
             for(int m = -1; m < 2; m ++)  // Find nearest point among center 10 points. Character "Tian" corners
             {
@@ -310,13 +317,29 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
                     if(new_x < 1 || new_x > IMGWIDTH - 2) continue;
                     if(new_y < 1 || new_y > IMGHEIGHT - 2) continue;
 
-                    if(cloud_in->points[new_x + new_y * IMGWIDTH].z < object_z)
+                    if(cloud_in->points[new_x + new_y * IMGWIDTH].z == cloud_in->points[new_x + new_y * IMGWIDTH].z
+                            && cloud_in->points[new_x + new_y * IMGWIDTH].z < object_z)
                         object_z = cloud_in->points[new_x + new_y * IMGWIDTH].z;
                 }
 
             }
 
+            /* Test */
+//            std::cout << "z="<<object_z<<" ";
+//            float object_x_l1= (semantic_objects[i].tl_x - IMGWIDTH/2.0f) * object_z /camera_fx;
+//            float object_y_l1 = (semantic_objects[i].tl_y - IMGHEIGHT/2.0f) * object_z /camera_fy;
+//            float object_x_r1 = (semantic_objects[i].br_x - IMGWIDTH/2.0f) * object_z /camera_fx;
+//            float object_y_r1 = (semantic_objects[i].br_y - IMGHEIGHT/2.0f) * object_z /camera_fy;
+//            std::cout << "***" << object_x_l1 - object_x_r1 << ", " << object_y_l1 - object_y_r1 << std::endl;
+//            std::cout << "#" << object_y_l1 << std::endl;
+//            std::cout << "%" << semantic_objects[i].tl_y << ", " << IMGHEIGHT/2 <<", "<< camera_fy << std::endl;
+
+            /* Test ends */
+
             if(object_z > useful_dist) continue; // if too far beyond map range, abort
+
+            float z_div_camera_fx = object_z /camera_fx;
+            float z_div_camera_fy = object_z /camera_fy;
 
             for(int x = semantic_objects[i].tl_x; x <= semantic_objects[i].br_x; x++)
             {
@@ -324,8 +347,9 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
                 {
                     // Reconstruct dynamic objects
                     pcl::PointXYZRGB temp_point;
-                    float object_x = (x - IMGWIDTH/2) * object_z /camera_fx;
-                    float object_y = (y - IMGHEIGHT/2) * object_z /camera_fy;
+
+                    float object_x = (x - img_width_half) * z_div_camera_fx;
+                    float object_y = (y - img_height_half) * z_div_camera_fy;
                     temp_point.x = object_x;
                     temp_point.y = object_y;
                     temp_point.z = object_z;
@@ -549,6 +573,9 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "mapping");
     ros::NodeHandle nh;
+
+    img_width_half = IMGWIDTH / 2.f;
+    img_height_half = IMGHEIGHT / 2.f;
 
     // ringbuffer cloud2
     cloud2_pub = nh.advertise<sensor_msgs::PointCloud2>("ring_buffer/cloud_ob", 1, true);

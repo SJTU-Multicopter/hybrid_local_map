@@ -239,14 +239,14 @@ class EuclideanDistanceNormalRingBuffer
                     }
                     else if(occupancy_buffer_.isFree(coord)) //Free space semantic label should be eliminated
                     {
-                        Vector3 p;
-                        getPoint(coord, p);
-
-                        pcl::PointXYZI pclp;
-                        pclp.x = p(0);
-                        pclp.y = p(1);
-                        pclp.z = p(2);
-                        pclp.intensity = 0.0;
+//                        Vector3 p;
+//                        getPoint(coord, p);
+//
+//                        pcl::PointXYZI pclp;
+//                        pclp.x = p(0);
+//                        pclp.y = p(1);
+//                        pclp.z = p(2);
+//                        pclp.intensity = 0.0;
 
                         // // Consider x, y plain for fly direction
                         // double temp_x = pclp.x - center(0);
@@ -269,7 +269,7 @@ class EuclideanDistanceNormalRingBuffer
                         //     pclp.intensity = 2;
                         // }
                     
-                        cloud.points.push_back(pclp);
+//                        cloud.points.push_back(pclp);
                     }
                 }
             }

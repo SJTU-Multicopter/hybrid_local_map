@@ -52,8 +52,11 @@ class RaycastRingBuffer {
   static constexpr double min_val = -2;
   static constexpr double max_val = 3.5;
 
-  static constexpr double hit = 0.6; // Origin 0.85, chg
+  static constexpr double hit = 1.0; // Origin 0.85, chg
   static constexpr double miss = -1.0; // Origin -0.4, chg
+
+  static constexpr double hit_shrink = 0.8; // (0,1), chg add
+  static constexpr double miss_shrink = 0.8; // (0, 1), chg add
 
   static constexpr _Datatype datatype_max = std::numeric_limits<_Datatype>::max(); // 32767
   static constexpr _Datatype datatype_min = std::numeric_limits<_Datatype>::min();  // minimum(not lowest), positive
@@ -62,6 +65,9 @@ class RaycastRingBuffer {
 
   static constexpr _Datatype datatype_hit = hit * datatype_range/(max_val - min_val); //10128
   static constexpr _Datatype datatype_miss = miss * datatype_range/(max_val - min_val);
+
+  static constexpr _Datatype datatype_hit_thresh = hit * datatype_range/(max_val - min_val) * hit_shrink; //chg add
+  static constexpr _Datatype datatype_miss_thresh = miss * datatype_range/(max_val - min_val) * miss_shrink; //chg add
 
 
   // Other definitions
@@ -335,11 +341,13 @@ class RaycastRingBuffer {
   }
 
   static inline bool isOccupied(const _Datatype & d) {
-    return d > datatype_hit;
+//    return d > datatype_hit;
+    return d > datatype_hit_thresh;
   }
 
   static inline bool isFree(const _Datatype & d) {
-    return d < datatype_miss;
+//    return d < datatype_miss;
+    return d < datatype_miss_thresh;
   }
 
   void closestPointInVolume(const Vector3 &point,
