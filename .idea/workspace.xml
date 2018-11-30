@@ -99,13 +99,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="987385d1-dda5-469a-97e5-223669643939" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/darknet_ros" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/darknet_ros/darknet" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros/darknet" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/darknet_ros/darknet_ros/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros/darknet_ros/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h" beforeDir="false" afterPath="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h" beforeDir="false" afterPath="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/secure_flying/src/mapping_turtlebot.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/secure_flying/src/mapping_turtlebot.cpp" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <ignored path="$PROJECT_DIR$/../cmake-build-debug/" />
@@ -146,7 +142,7 @@
         <entry file="file://$PROJECT_DIR$/secure_flying/CMakeLists.txt">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="38">
-              <caret line="2" lean-forward="true" selection-start-line="2" selection-end-line="2" />
+              <caret line="2" selection-start-line="2" selection-end-line="2" />
             </state>
           </provider>
         </entry>
@@ -164,7 +160,7 @@
         <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="-7998">
-              <caret line="54" column="56" lean-forward="true" selection-start-line="54" selection-start-column="56" selection-end-line="54" selection-end-column="56" />
+              <caret line="54" column="56" selection-start-line="54" selection-start-column="56" selection-end-line="54" selection-end-column="56" />
             </state>
           </provider>
         </entry>
@@ -173,7 +169,7 @@
         <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="287">
-              <caret line="272" column="21" lean-forward="true" selection-start-line="272" selection-start-column="21" selection-end-line="272" selection-end-column="21" />
+              <caret line="272" column="21" selection-start-line="272" selection-start-column="21" selection-end-line="272" selection-end-column="21" />
               <folding>
                 <element signature="e#121#158#0" expanded="true" />
               </folding>
@@ -247,7 +243,7 @@
     <packageJsonPaths />
   </component>
   <component name="OCFindUsagesOptions" text="false" ivars="false" properties="true" derivedClasses="false" />
-  <component name="ProjectFrameBounds" extendedState="7">
+  <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="2187" />
     <option name="y" value="-4" />
     <option name="width" value="1853" />
@@ -560,12 +556,12 @@
       <workItem from="1540368362897" duration="39000" />
       <workItem from="1541228994845" duration="22736000" />
       <workItem from="1541496146866" duration="678000" />
-      <workItem from="1543556581080" duration="9911000" />
+      <workItem from="1543556581080" duration="10511000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="63785000" />
+    <option name="totallyTimeSpent" value="64385000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -587,7 +583,7 @@
       <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.13548388" />
       <window_info anchor="bottom" id="Version Control" order="10" weight="0.32903227" />
-      <window_info anchor="bottom" id="Run" order="2" visible="true" weight="0.29032257" />
+      <window_info anchor="bottom" id="Run" order="2" weight="0.29032257" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info anchor="bottom" id="Terminal" order="8" weight="0.3376344" />
       <window_info id="Favorites" order="2" side_tool="true" />
@@ -913,7 +909,7 @@
     <entry file="file://$PROJECT_DIR$/secure_flying/CMakeLists.txt">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="38">
-          <caret line="2" lean-forward="true" selection-start-line="2" selection-end-line="2" />
+          <caret line="2" selection-start-line="2" selection-end-line="2" />
         </state>
       </provider>
     </entry>
@@ -937,14 +933,14 @@
     <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-7998">
-          <caret line="54" column="56" lean-forward="true" selection-start-line="54" selection-start-column="56" selection-end-line="54" selection-end-column="56" />
+          <caret line="54" column="56" selection-start-line="54" selection-start-column="56" selection-end-line="54" selection-end-column="56" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="287">
-          <caret line="272" column="21" lean-forward="true" selection-start-line="272" selection-start-column="21" selection-end-line="272" selection-end-column="21" />
+          <caret line="272" column="21" selection-start-line="272" selection-start-column="21" selection-end-line="272" selection-end-column="21" />
           <folding>
             <element signature="e#121#158#0" expanded="true" />
           </folding>
