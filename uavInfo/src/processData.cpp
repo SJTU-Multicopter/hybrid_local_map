@@ -37,8 +37,11 @@ float angular_cmd = 0.0f;
 float pos_target_x = 0.0f;
 float pos_target_y = 0.0f;
 float yaw_target = 0.0f;
-const int num_uavdata = 9;
-int num_label = 4;
+float yaw_current = 0.0f;
+float yaw_delt = 0.0f;
+
+const int num_uavdata = 11;
+const int num_label = 4;
 const int img_width = 64;
 const int img_height = 64;
 const int info_dim = 1;
@@ -114,12 +117,12 @@ void CallbackPointCloud(const sensor_msgs::PointCloud2ConstPtr& cloud)
 
     timestamp = cloud->header.stamp;
     float tmp_uav[num_uavdata] = {position_odom_x, position_odom_y, vel_odom, angular_odom,
-                    position_radar_x, position_radar_y, pos_target_x, pos_target_y, yaw_target};
+                    position_radar_x, position_radar_y, pos_target_x, pos_target_y, yaw_target, yaw_current, yaw_delt};
     float tmp_label[num_label] = {vel_cmd, angular_cmd, vel_smoother, angular_smoother};
     std::vector<float>data_label_tmp;
     std::vector<float>data_uav_tmp;
-    data_uav_tmp.insert(data_uav_tmp.begin(), tmp_uav, tmp_uav+9);
-    data_label_tmp.insert(data_label_tmp.begin(), tmp_label, tmp_label+4);
+    data_uav_tmp.insert(data_uav_tmp.begin(), tmp_uav, tmp_uav+num_uavdata);
+    data_label_tmp.insert(data_label_tmp.begin(), tmp_label, tmp_label+num_label);
     writeCsvOneLine(data_uav_tmp, data_label_tmp);
     cout<<"reading odom cloud data..."<<endl;
 
@@ -200,6 +203,16 @@ void callBackTargetYaw(const std_msgs::Float64::ConstPtr& data)
     yaw_target = data->data;
 }
 
+void callBackCurrentYaw(const std_msgs::Float64::ConstPtr& data)
+{
+    yaw_current = data->data;
+}
+
+void callBackDeltYaw(const std_msgs::Float64::ConstPtr& data)
+{
+    yaw_delt = data->data;
+}
+
 
 int main(int argc, char** argv)
 {
@@ -218,7 +231,7 @@ int main(int argc, char** argv)
     outFile_uavdata.open(uav_data, ios::out);
     outFile_uavdata<<"position_odom_x"<<","<<"position_odom_y"<<","<<"vel_odom"<<","<<"angular_odom"
            <<","<<"position_radar_x"<<","<<"position_radar_y"<<","<<"pos_target_x"
-           <<","<<"pos_target_y"<<","<<"yaw_target"<<endl;
+           <<","<<"pos_target_y"<<","<<"yaw_target" <<","<<"yaw_current"<<","<<"yaw_delt"<<endl;
 
     outFile_labels.open(label_data, ios::out);
     outFile_labels<<"vel_cmd"<<","<<"angular_cmd"<<","<<"vel_smoother"<<","<<"angular_smoother"<<endl;
@@ -234,6 +247,8 @@ int main(int argc, char** argv)
     ros::Subscriber CmdSmoother_sub = nh.subscribe("/teleop_velocity_smoother/raw_cmd_vel", 2, callBackCmdSmoother);
     ros::Subscriber TargetPos_sub = nh.subscribe("/radar/target_point", 2, callBackTargetPos);
     ros::Subscriber TargetYaw_sub = nh.subscribe("/radar/target_yaw", 2, callBackTargetYaw);
+    ros::Subscriber CurrentYaw_sub = nh.subscribe("/radar/current_yaw", 2, callBackCurrentYaw);
+    ros::Subscriber DeltYaw_sub = nh.subscribe("/radar/delt_yaw", 2, callBackDeltYaw);
     ros::spin();
     outFile_uavdata.close();
     outFile_labels.close();
