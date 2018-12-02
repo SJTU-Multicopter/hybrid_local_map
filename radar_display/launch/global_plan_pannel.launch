@@ -1,6 +1,6 @@
 <launch>
     <node name="global_path" pkg="radar_display" type="global_path" output="screen">
     </node>
-    <node name="lantern" pkg="radar_display" type="lantern" output="screen">
+    <node name="lantern_with_pannel" pkg="radar_display" type="lantern_with_pannel" output="screen">
     </node>
 </launch>

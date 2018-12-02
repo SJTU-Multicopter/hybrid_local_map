@@ -21,3 +21,5 @@ target_link_libraries(global_path ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 add_executable(lantern src/lantern.cpp)
 target_link_libraries(lantern  ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
+add_executable(lantern_with_pannel src/lantern_with_pannel.cpp)
+target_link_libraries(lantern_with_pannel  ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
