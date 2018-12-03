@@ -52,8 +52,8 @@ class RaycastRingBuffer {
   static constexpr double min_val = -2;
   static constexpr double max_val = 3.5;
 
-  static constexpr double hit = 1.0; // Origin 0.85, chg
-  static constexpr double miss = -1.0; // Origin -0.4, chg
+  static constexpr double hit = 0.85; // Origin 0.85, chg
+  static constexpr double miss = -0.8; // Origin -0.4, chg
 
   static constexpr double hit_shrink = 0.8; // (0,1), chg add
   static constexpr double miss_shrink = 0.8; // (0, 1), chg add

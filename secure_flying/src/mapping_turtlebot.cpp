@@ -457,16 +457,16 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
         }
     }
 
-    // insert common point cloud to ringbuffer
     double t1 = ros::Time::now().toSec();
-    rrb.insertPointCloud(cloud_ew, origin);
-
     // insert dynamic points to ringbuffer
     if(cloud_dynamic->size() > 0)
     {
         ROS_INFO("dynamic");
         rrb.insertPointCloudDynamic(cloud_dyn, origin);
     }
+
+    // insert common point cloud to ringbuffer
+    rrb.insertPointCloud(cloud_ew, origin);
 
     // Insert Semantic Info here, CHG
     rrb.insertPointCloudSemanticLabel(*cloud_label_2, objects_updated);
@@ -602,7 +602,7 @@ int main(int argc, char** argv)
     
 
     // timer for publish ringbuffer as pointcloud
-    ros::Timer timer1 = nh.createTimer(ros::Duration(0.2), timerCallback); // RATE
+    ros::Timer timer1 = nh.createTimer(ros::Duration(0.1), timerCallback); // RATE
 
     ros::Duration(0.5).sleep();
 

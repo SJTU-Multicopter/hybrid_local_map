@@ -171,6 +171,8 @@ void callBackOdom(const nav_msgs::OdometryConstPtr& odom)
 {
     position_odom_x = odom->pose.pose.position.x;
     position_odom_y = odom->pose.pose.position.y;
+    vel_odom = odom->twist.twist.linear.x;
+    angular_odom = odom->twist.twist.angular.z;
 
 }
 

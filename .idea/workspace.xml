@@ -48,6 +48,7 @@
       <config projectName="Project" targetName="rosgraph_msgs_generate_messages_eus" />
       <config projectName="Project" targetName="roscpp_generate_messages_nodejs" />
       <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_BoundingBoxes" />
+      <config projectName="Project" targetName="processData" />
       <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_py" />
       <config projectName="Project" targetName="download_extra_data" />
       <config projectName="Project" targetName="global_path" />
@@ -69,8 +70,8 @@
       <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsActionFeedback" />
       <config projectName="Project" targetName="darknet_ros_msgs_gennodejs" />
       <config projectName="Project" targetName="sensor_msgs_generate_messages_lisp" />
-      <config projectName="Project" targetName="actionlib_generate_messages_cpp" />
       <config projectName="Project" targetName="_run_tests_darknet_ros_rostest" />
+      <config projectName="Project" targetName="actionlib_generate_messages_cpp" />
       <config projectName="Project" targetName="gmock_main" />
       <config projectName="Project" targetName="usb_cam" />
       <config projectName="Project" targetName="std_srvs_generate_messages_lisp" />
@@ -84,12 +85,13 @@
       <config projectName="Project" targetName="_run_tests_darknet_ros_rostest_test_object_detection.test" />
       <config projectName="Project" targetName="darknet_ros_msgs_genlisp" />
       <config projectName="Project" targetName="sensor_msgs_generate_messages_cpp" />
-      <config projectName="Project" targetName="run_tests_darknet_ros_rostest" />
       <config projectName="Project" targetName="roscpp_generate_messages_lisp" />
+      <config projectName="Project" targetName="run_tests_darknet_ros_rostest" />
       <config projectName="Project" targetName="static_mapping" />
       <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsAction" />
       <config projectName="Project" targetName="usb_cam_node" />
       <config projectName="Project" targetName="geometry_msgs_generate_messages_eus" />
+      <config projectName="Project" targetName="lantern_with_pannel" />
     </generated>
   </component>
   <component name="CMakeSettings">
@@ -99,9 +101,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="987385d1-dda5-469a-97e5-223669643939" name="Default" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/darknet_ros" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/darknet_ros/darknet" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros/darknet" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/darknet_ros/darknet_ros/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros/darknet_ros/CMakeLists.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h" beforeDir="false" afterPath="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/secure_flying/src/mapping_turtlebot.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/secure_flying/src/mapping_turtlebot.cpp" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <ignored path="$PROJECT_DIR$/../cmake-build-debug/" />
@@ -126,11 +131,11 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="375">
-      <file leaf-file-name="mapping_turtlebot.cpp" pinned="false" current-in-tab="false">
+      <file leaf-file-name="mapping_turtlebot.cpp" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/secure_flying/src/mapping_turtlebot.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="342">
-              <caret line="46" column="37" selection-start-line="46" selection-start-column="37" selection-end-line="46" selection-end-column="37" />
+            <state relative-caret-position="133">
+              <caret line="584" lean-forward="true" selection-start-line="584" selection-end-line="584" />
               <folding>
                 <element signature="e#0#36#0" expanded="true" />
               </folding>
@@ -150,7 +155,7 @@
       <file leaf-file-name="ring_buffer_base.h" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ring_buffer_base.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="589">
+            <state relative-caret-position="2223">
               <caret line="117" selection-start-line="117" selection-end-line="117" />
             </state>
           </provider>
@@ -159,17 +164,17 @@
       <file leaf-file-name="raycast_ring_buffer.h" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-7998">
-              <caret line="54" column="56" selection-start-line="54" selection-start-column="56" selection-end-line="54" selection-end-column="56" />
+            <state relative-caret-position="97">
+              <caret line="44" column="45" lean-forward="true" selection-start-line="44" selection-start-column="45" selection-end-line="44" selection-end-column="45" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="ed_nor_ring_buffer.h" pinned="false" current-in-tab="true">
+      <file leaf-file-name="ed_nor_ring_buffer.h" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="287">
-              <caret line="272" column="21" selection-start-line="272" selection-start-column="21" selection-end-line="272" selection-end-column="21" />
+            <state relative-caret-position="3895">
+              <caret line="205" column="26" selection-start-line="205" selection-start-column="26" selection-end-line="205" selection-end-column="26" />
               <folding>
                 <element signature="e#121#158#0" expanded="true" />
               </folding>
@@ -205,9 +210,11 @@
       <find>label_possibility_</find>
       <find>resolution</find>
       <find>datatype_hit</find>
-      <find>addHit</find>
       <find>datatype_min</find>
       <find>camera_fx</find>
+      <find>addMiss</find>
+      <find>addHit</find>
+      <find>addHitDynamic</find>
     </findStrings>
     <dirStrings>
       <dir>/usr/include/c++</dir>
@@ -227,9 +234,9 @@
         <option value="$PROJECT_DIR$/secure_flying/src/static_mapping.cpp" />
         <option value="$PROJECT_DIR$/secure_flying/src/mapping.cpp" />
         <option value="$PROJECT_DIR$/secure_flying/CMakeLists.txt" />
-        <option value="$PROJECT_DIR$/secure_flying/src/mapping_turtlebot.cpp" />
-        <option value="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h" />
         <option value="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h" />
+        <option value="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h" />
+        <option value="$PROJECT_DIR$/secure_flying/src/mapping_turtlebot.cpp" />
       </list>
     </option>
   </component>
@@ -244,10 +251,10 @@
   </component>
   <component name="OCFindUsagesOptions" text="false" ivars="false" properties="true" derivedClasses="false" />
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="2187" />
+    <option name="x" value="-221" />
     <option name="y" value="-4" />
-    <option name="width" value="1853" />
-    <option name="height" value="1076" />
+    <option name="width" value="1851" />
+    <option name="height" value="1068" />
   </component>
   <component name="ProjectInspectionProfilesVisibleTreeState">
     <entry key="Project Default">
@@ -393,8 +400,10 @@
     <configuration name="gtest" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="gtest" CONFIG_NAME="Debug" />
     <configuration name="gtest_main" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="gtest_main" CONFIG_NAME="Debug" />
     <configuration name="lantern" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="lantern" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Project" RUN_TARGET_NAME="lantern" />
+    <configuration name="lantern_with_pannel" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="lantern_with_pannel" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Project" RUN_TARGET_NAME="lantern_with_pannel" />
     <configuration name="mapping" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="mapping" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Project" RUN_TARGET_NAME="mapping" />
     <configuration name="mapping_turtlebot" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="mapping_turtlebot" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Project" RUN_TARGET_NAME="mapping_turtlebot" />
+    <configuration name="processData" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="processData" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Project" RUN_TARGET_NAME="processData" />
     <configuration name="radar" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="radar" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Project" RUN_TARGET_NAME="radar" />
     <configuration name="roscpp_generate_messages_cpp" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="roscpp_generate_messages_cpp" CONFIG_NAME="Debug" />
     <configuration name="roscpp_generate_messages_eus" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="roscpp_generate_messages_eus" CONFIG_NAME="Debug" />
@@ -519,6 +528,8 @@
       <item itemvalue="Application.gmock_main" />
       <item itemvalue="Application.gtest" />
       <item itemvalue="Application.gtest_main" />
+      <item itemvalue="Application.lantern_with_pannel" />
+      <item itemvalue="Application.processData" />
     </list>
   </component>
   <component name="SvnConfiguration">
@@ -557,11 +568,12 @@
       <workItem from="1541228994845" duration="22736000" />
       <workItem from="1541496146866" duration="678000" />
       <workItem from="1543556581080" duration="10511000" />
+      <workItem from="1543804944371" duration="1365000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="64385000" />
+    <option name="totallyTimeSpent" value="65750000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -573,15 +585,13 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="1920" y="-4" width="1920" height="1084" extended-state="6" />
+    <frame x="65" y="-4" width="1855" height="1084" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.1864765" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.13293217" />
       <window_info anchor="bottom" id="TODO" order="6" weight="0.32903227" />
-      <window_info anchor="bottom" id="Messages" order="7" weight="0.32795697" />
       <window_info anchor="bottom" id="CMake" order="11" weight="0.32903227" />
       <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" />
-      <window_info anchor="bottom" id="Find" order="1" weight="0.13548388" />
       <window_info anchor="bottom" id="Version Control" order="10" weight="0.32903227" />
       <window_info anchor="bottom" id="Run" order="2" weight="0.29032257" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
@@ -593,10 +603,12 @@
       <window_info anchor="bottom" id="Inspection Results" order="12" weight="0.32903227" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
-      <window_info anchor="right" id="Database" order="3" />
       <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="right" id="Database" order="3" />
       <window_info anchor="bottom" id="Database Changes" order="7" show_stripe_button="false" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.13548388" />
+      <window_info anchor="bottom" id="Messages" order="7" weight="0.32795697" />
     </layout>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -611,6 +623,16 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="5168">
+          <caret line="272" column="21" selection-start-line="272" selection-start-column="21" selection-end-line="272" selection-end-column="21" />
+          <folding>
+            <element signature="e#121#158#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="2831">
@@ -903,9 +925,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/../CMakeLists.txt">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
     <entry file="file://$PROJECT_DIR$/secure_flying/CMakeLists.txt">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="38">
@@ -915,34 +934,34 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ring_buffer_base.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="589">
+        <state relative-caret-position="2223">
           <caret line="117" selection-start-line="117" selection-end-line="117" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/secure_flying/src/mapping_turtlebot.cpp">
+    <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="342">
-          <caret line="46" column="37" selection-start-line="46" selection-start-column="37" selection-end-line="46" selection-end-column="37" />
+        <state relative-caret-position="3895">
+          <caret line="205" column="26" selection-start-line="205" selection-start-column="26" selection-end-line="205" selection-end-column="26" />
           <folding>
-            <element signature="e#0#36#0" expanded="true" />
+            <element signature="e#121#158#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-7998">
-          <caret line="54" column="56" selection-start-line="54" selection-start-column="56" selection-end-line="54" selection-end-column="56" />
+        <state relative-caret-position="97">
+          <caret line="44" column="45" lean-forward="true" selection-start-line="44" selection-start-column="45" selection-end-line="44" selection-end-column="45" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h">
+    <entry file="file://$PROJECT_DIR$/secure_flying/src/mapping_turtlebot.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="287">
-          <caret line="272" column="21" selection-start-line="272" selection-start-column="21" selection-end-line="272" selection-end-column="21" />
+        <state relative-caret-position="133">
+          <caret line="584" lean-forward="true" selection-start-line="584" selection-end-line="584" />
           <folding>
-            <element signature="e#121#158#0" expanded="true" />
+            <element signature="e#0#36#0" expanded="true" />
           </folding>
         </state>
       </provider>
