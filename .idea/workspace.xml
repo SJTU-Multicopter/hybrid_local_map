@@ -2,96 +2,96 @@
 <project version="4">
   <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true" buildAllGenerated="true">
     <generated>
-      <config projectName="Project" targetName="_run_tests_darknet_ros" />
-      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_BoundingBox" />
-      <config projectName="Project" targetName="roscpp_generate_messages_py" />
-      <config projectName="Project" targetName="darknet_ros_lib" />
-      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsActionResult" />
-      <config projectName="Project" targetName="darknet_ros_msgs_geneus" />
-      <config projectName="Project" targetName="sensor_msgs_generate_messages_nodejs" />
-      <config projectName="Project" targetName="std_msgs_generate_messages_cpp" />
-      <config projectName="Project" targetName="actionlib_generate_messages_nodejs" />
-      <config projectName="Project" targetName="clean_test_results" />
-      <config projectName="Project" targetName="lantern" />
-      <config projectName="Project" targetName="gtest" />
-      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_cpp" />
-      <config projectName="Project" targetName="std_msgs_generate_messages_nodejs" />
-      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsGoal" />
-      <config projectName="Project" targetName="geometry_msgs_generate_messages_cpp" />
-      <config projectName="Project" targetName="darknet_ros_object_detection-test" />
-      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_cpp" />
-      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_lisp" />
-      <config projectName="Project" targetName="sensor_msgs_generate_messages_py" />
-      <config projectName="Project" targetName="std_srvs_generate_messages_nodejs" />
+      <config projectName="Project" targetName="gmock" />
+      <config projectName="Project" targetName="std_srvs_generate_messages_lisp" />
+      <config projectName="Project" targetName="sensor_msgs_generate_messages_eus" />
       <config projectName="Project" targetName="geometry_msgs_generate_messages_lisp" />
-      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_py" />
+      <config projectName="Project" targetName="darknet_ros_object_detection-test" />
+      <config projectName="Project" targetName="run_tests" />
+      <config projectName="Project" targetName="actionlib_msgs_generate_messages_nodejs" />
+      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_py" />
+      <config projectName="Project" targetName="std_msgs_generate_messages_lisp" />
+      <config projectName="Project" targetName="darknet_ros_msgs_geneus" />
+      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_eus" />
+      <config projectName="Project" targetName="mapping" />
+      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsGoal" />
+      <config projectName="Project" targetName="std_srvs_generate_messages_nodejs" />
+      <config projectName="Project" targetName="download_extra_data" />
+      <config projectName="Project" targetName="run_tests_darknet_ros_rostest_test_object_detection.test" />
+      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsActionResult" />
+      <config projectName="Project" targetName="actionlib_msgs_generate_messages_eus" />
+      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_eus" />
+      <config projectName="Project" targetName="gtest_main" />
+      <config projectName="Project" targetName="darknet_ros_msgs_gennodejs" />
+      <config projectName="Project" targetName="tests" />
+      <config projectName="Project" targetName="lantern" />
+      <config projectName="Project" targetName="roscpp_generate_messages_lisp" />
+      <config projectName="Project" targetName="std_srvs_generate_messages_eus" />
+      <config projectName="Project" targetName="_run_tests_darknet_ros_rostest" />
+      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_nodejs" />
+      <config projectName="Project" targetName="roscpp_generate_messages_py" />
+      <config projectName="Project" targetName="processData" />
+      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsResult" />
+      <config projectName="Project" targetName="actionlib_generate_messages_eus" />
+      <config projectName="Project" targetName="darknet_ros_msgs_genpy" />
+      <config projectName="Project" targetName="clean_test_results" />
+      <config projectName="Project" targetName="darknet_ros_msgs_gencpp" />
+      <config projectName="Project" targetName="actionlib_msgs_generate_messages_lisp" />
+      <config projectName="Project" targetName="roscpp_generate_messages_cpp" />
+      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_lisp" />
+      <config projectName="Project" targetName="darknet_ros" />
+      <config projectName="Project" targetName="actionlib_generate_messages_cpp" />
+      <config projectName="Project" targetName="geometry_msgs_generate_messages_cpp" />
+      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsActionFeedback" />
+      <config projectName="Project" targetName="actionlib_msgs_generate_messages_py" />
+      <config projectName="Project" targetName="gtest" />
+      <config projectName="Project" targetName="gmock_main" />
+      <config projectName="Project" targetName="std_srvs_generate_messages_py" />
+      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsActionGoal" />
+      <config projectName="Project" targetName="actionlib_generate_messages_py" />
+      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_BoundingBoxes" />
+      <config projectName="Project" targetName="std_srvs_generate_messages_cpp" />
+      <config projectName="Project" targetName="actionlib_generate_messages_lisp" />
+      <config projectName="Project" targetName="sensor_msgs_generate_messages_nodejs" />
+      <config projectName="Project" targetName="darknet_ros_msgs_genlisp" />
+      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsAction" />
+      <config projectName="Project" targetName="actionlib_generate_messages_nodejs" />
+      <config projectName="Project" targetName="static_mapping" />
+      <config projectName="Project" targetName="std_msgs_generate_messages_nodejs" />
+      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsFeedback" />
+      <config projectName="Project" targetName="std_msgs_generate_messages_cpp" />
+      <config projectName="Project" targetName="sensor_msgs_generate_messages_py" />
+      <config projectName="Project" targetName="doxygen" />
+      <config projectName="Project" targetName="roscpp_generate_messages_eus" />
       <config projectName="Project" targetName="std_msgs_generate_messages_py" />
       <config projectName="Project" targetName="darknet_ros_msgs_generate_messages" />
-      <config projectName="Project" targetName="gmock" />
-      <config projectName="Project" targetName="actionlib_msgs_generate_messages_eus" />
-      <config projectName="Project" targetName="roscpp_generate_messages_eus" />
-      <config projectName="Project" targetName="doxygen" />
-      <config projectName="Project" targetName="darknet_ros_msgs_gencpp" />
-      <config projectName="Project" targetName="tests" />
-      <config projectName="Project" targetName="std_msgs_generate_messages_eus" />
-      <config projectName="Project" targetName="darknet_ros_msgs_genpy" />
-      <config projectName="Project" targetName="actionlib_msgs_generate_messages_lisp" />
-      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_eus" />
-      <config projectName="Project" targetName="_catkin_empty_exported_target" />
-      <config projectName="Project" targetName="std_srvs_generate_messages_py" />
-      <config projectName="Project" targetName="actionlib_generate_messages_py" />
-      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_nodejs" />
-      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_nodejs" />
-      <config projectName="Project" targetName="run_tests_darknet_ros_rostest_test_object_detection.test" />
-      <config projectName="Project" targetName="actionlib_generate_messages_eus" />
-      <config projectName="Project" targetName="clean_test_results_darknet_ros" />
-      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_eus" />
-      <config projectName="Project" targetName="roscpp_generate_messages_nodejs" />
-      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_BoundingBoxes" />
-      <config projectName="Project" targetName="processData" />
-      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_py" />
-      <config projectName="Project" targetName="download_extra_data" />
-      <config projectName="Project" targetName="global_path" />
-      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsFeedback" />
-      <config projectName="Project" targetName="run_tests" />
-      <config projectName="Project" targetName="std_srvs_generate_messages_cpp" />
-      <config projectName="Project" targetName="geometry_msgs_generate_messages_py" />
-      <config projectName="Project" targetName="geometry_msgs_generate_messages_nodejs" />
-      <config projectName="Project" targetName="mapping" />
-      <config projectName="Project" targetName="roscpp_generate_messages_cpp" />
-      <config projectName="Project" targetName="actionlib_generate_messages_lisp" />
-      <config projectName="Project" targetName="actionlib_msgs_generate_messages_cpp" />
-      <config projectName="Project" targetName="actionlib_msgs_generate_messages_nodejs" />
-      <config projectName="Project" targetName="actionlib_msgs_generate_messages_py" />
-      <config projectName="Project" targetName="sensor_msgs_generate_messages_eus" />
-      <config projectName="Project" targetName="darknet_ros" />
-      <config projectName="Project" targetName="mapping_turtlebot" />
-      <config projectName="Project" targetName="std_msgs_generate_messages_lisp" />
-      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsActionFeedback" />
-      <config projectName="Project" targetName="darknet_ros_msgs_gennodejs" />
-      <config projectName="Project" targetName="sensor_msgs_generate_messages_lisp" />
-      <config projectName="Project" targetName="_run_tests_darknet_ros_rostest" />
-      <config projectName="Project" targetName="actionlib_generate_messages_cpp" />
-      <config projectName="Project" targetName="gmock_main" />
-      <config projectName="Project" targetName="usb_cam" />
-      <config projectName="Project" targetName="std_srvs_generate_messages_lisp" />
-      <config projectName="Project" targetName="gtest_main" />
-      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsResult" />
-      <config projectName="Project" targetName="run_tests_darknet_ros" />
-      <config projectName="Project" targetName="std_srvs_generate_messages_eus" />
-      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsActionGoal" />
-      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_lisp" />
-      <config projectName="Project" targetName="radar" />
-      <config projectName="Project" targetName="_run_tests_darknet_ros_rostest_test_object_detection.test" />
-      <config projectName="Project" targetName="darknet_ros_msgs_genlisp" />
-      <config projectName="Project" targetName="sensor_msgs_generate_messages_cpp" />
-      <config projectName="Project" targetName="roscpp_generate_messages_lisp" />
-      <config projectName="Project" targetName="run_tests_darknet_ros_rostest" />
-      <config projectName="Project" targetName="static_mapping" />
-      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_CheckForObjectsAction" />
       <config projectName="Project" targetName="usb_cam_node" />
+      <config projectName="Project" targetName="darknet_ros_lib" />
+      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_nodejs" />
       <config projectName="Project" targetName="geometry_msgs_generate_messages_eus" />
+      <config projectName="Project" targetName="run_tests_darknet_ros_rostest" />
+      <config projectName="Project" targetName="sensor_msgs_generate_messages_cpp" />
       <config projectName="Project" targetName="lantern_with_pannel" />
+      <config projectName="Project" targetName="_run_tests_darknet_ros" />
+      <config projectName="Project" targetName="usb_cam" />
+      <config projectName="Project" targetName="_catkin_empty_exported_target" />
+      <config projectName="Project" targetName="global_path" />
+      <config projectName="Project" targetName="geometry_msgs_generate_messages_nodejs" />
+      <config projectName="Project" targetName="sensor_msgs_generate_messages_lisp" />
+      <config projectName="Project" targetName="_run_tests_darknet_ros_rostest_test_object_detection.test" />
+      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_cpp" />
+      <config projectName="Project" targetName="rosgraph_msgs_generate_messages_py" />
+      <config projectName="Project" targetName="std_msgs_generate_messages_eus" />
+      <config projectName="Project" targetName="run_tests_darknet_ros" />
+      <config projectName="Project" targetName="radar" />
+      <config projectName="Project" targetName="_darknet_ros_msgs_generate_messages_check_deps_BoundingBox" />
+      <config projectName="Project" targetName="mapping_turtlebot" />
+      <config projectName="Project" targetName="clean_test_results_darknet_ros" />
+      <config projectName="Project" targetName="actionlib_msgs_generate_messages_cpp" />
+      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_lisp" />
+      <config projectName="Project" targetName="darknet_ros_msgs_generate_messages_cpp" />
+      <config projectName="Project" targetName="roscpp_generate_messages_nodejs" />
+      <config projectName="Project" targetName="geometry_msgs_generate_messages_py" />
     </generated>
   </component>
   <component name="CMakeSettings">
@@ -101,12 +101,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="987385d1-dda5-469a-97e5-223669643939" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/darknet_ros" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/darknet_ros/darknet" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros/darknet" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/darknet_ros/darknet_ros/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/darknet_ros/darknet_ros/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h" beforeDir="false" afterPath="$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/secure_flying/src/mapping_turtlebot.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/secure_flying/src/mapping_turtlebot.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/radar_display/src/global_path.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/radar_display/src/global_path.cpp" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/cmake-build-debug/" />
     <ignored path="$PROJECT_DIR$/../cmake-build-debug/" />
@@ -135,7 +133,7 @@
         <entry file="file://$PROJECT_DIR$/secure_flying/src/mapping_turtlebot.cpp">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="133">
-              <caret line="584" lean-forward="true" selection-start-line="584" selection-end-line="584" />
+              <caret line="584" selection-start-line="584" selection-end-line="584" />
               <folding>
                 <element signature="e#0#36#0" expanded="true" />
               </folding>
@@ -164,8 +162,8 @@
       <file leaf-file-name="raycast_ring_buffer.h" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="97">
-              <caret line="44" column="45" lean-forward="true" selection-start-line="44" selection-start-column="45" selection-end-line="44" selection-end-column="45" />
+            <state relative-caret-position="836">
+              <caret line="44" column="45" selection-start-line="44" selection-start-column="45" selection-end-line="44" selection-end-column="45" />
             </state>
           </provider>
         </entry>
@@ -328,7 +326,7 @@
   <component name="PropertiesComponent">
     <property name="SearchEverywhereHistoryKey" value="ter&#9;ACTION&#9;ActivateTerminalToolWindow" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$USER_HOME$/chg_workspace/rotors_ws/src/rotors_simulator" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/uavInfo" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
     <property name="run.code.analysis.last.selected.profile" value="aDefault" />
@@ -569,11 +567,12 @@
       <workItem from="1541496146866" duration="678000" />
       <workItem from="1543556581080" duration="10511000" />
       <workItem from="1543804944371" duration="1365000" />
+      <workItem from="1544074568607" duration="155000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="65750000" />
+    <option name="totallyTimeSpent" value="65905000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -585,8 +584,7 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="65" y="-4" width="1855" height="1084" extended-state="6" />
-    <editor active="true" />
+    <frame x="64" y="-11" width="1857" height="1092" extended-state="6" />
     <layout>
       <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.13293217" />
       <window_info anchor="bottom" id="TODO" order="6" weight="0.32903227" />
@@ -603,12 +601,12 @@
       <window_info anchor="bottom" id="Inspection Results" order="12" weight="0.32903227" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
-      <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="right" id="Database" order="3" />
+      <window_info anchor="bottom" id="Messages" order="7" weight="0.32795697" />
+      <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Database Changes" order="7" show_stripe_button="false" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.13548388" />
-      <window_info anchor="bottom" id="Messages" order="7" weight="0.32795697" />
     </layout>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -951,15 +949,15 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/ewok_ring_buffer/include/ewok/raycast_ring_buffer.h">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="97">
-          <caret line="44" column="45" lean-forward="true" selection-start-line="44" selection-start-column="45" selection-end-line="44" selection-end-column="45" />
+        <state relative-caret-position="836">
+          <caret line="44" column="45" selection-start-line="44" selection-start-column="45" selection-end-line="44" selection-end-column="45" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/secure_flying/src/mapping_turtlebot.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="133">
-          <caret line="584" lean-forward="true" selection-start-line="584" selection-end-line="584" />
+          <caret line="584" selection-start-line="584" selection-end-line="584" />
           <folding>
             <element signature="e#0#36#0" expanded="true" />
           </folding>

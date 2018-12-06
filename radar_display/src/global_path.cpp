@@ -13,10 +13,10 @@ using namespace cv;
 const double points[12][2] = {{-15, -12.7}, {-23, -6.6}, {-16, -6.5}, {13, -6.8}, {-23, 1.3}, {-16.1, 1.3}, 
 						{-4, 1.3}, {13, 1.3}, {23, 1.3}, {-3.8, 6.8}, {12.83, 6.7}, {23, 5}};
 
-const double spawn_position[2] = {-15, -12.7};
+const double spawn_position[2] = {-16, -6.5};
 
-const int point_num = 6;
-const int route[point_num] ={0, 2, 3, 7, 8, 11}; 
+const int point_num = 5;
+const int route[point_num] ={2, 3, 7, 8, 11}; 
 
 const double close_dist = 2.0;
 
@@ -96,23 +96,32 @@ int main(int argc, char **argv)
 
     	/* Calculate delt yaw */
     	double delt_yaw_value = 0.0;
-    	if(yaw_t * angle[2] < 0.0)  //avoid strange point 
-    	{
-    		if(yaw_t < 0.0)
-    		{
-    			delt_yaw_value = yaw_t + 2 * M_PI - angle[2];
-    		}
-    		else
-    		{
-    			delt_yaw_value = yaw_t - (2 * M_PI + angle[2]);
-    		}
-    	}
-    	else
-    	{
-    		delt_yaw_value = yaw_t - angle[2];
-    	}
+    	// if(yaw_t * angle[2] < 0.0)  //avoid strange point 
+    	// {
+    	// 	if(yaw_t < 0.0)
+    	// 	{
+    	// 		delt_yaw_value = yaw_t + 2 * M_PI - angle[2];
+    	// 	}
+    	// 	else
+    	// 	{
+    	// 		delt_yaw_value = yaw_t - (2 * M_PI + angle[2]);
+    	// 	}
+    	// }
+    	// else
+    	// {
+    	// 	delt_yaw_value = yaw_t - angle[2];
+    	// }
 
-    	if(fabs(delt_yaw_value) > 6.28) delt_yaw_value = 0.0;
+    	// if(fabs(delt_yaw_value) > 6.28) delt_yaw_value = 0.0;
+
+        double delt_yaw_direct = yaw_t - angle[2];
+        double delt_yaw_direct_abs = std::fabs(delt_yaw_direct);
+        double sup_yaw_direct_abs = 2*M_PI - delt_yaw_direct_abs;
+
+        if(delt_yaw_direct_abs < sup_yaw_direct_abs)
+            delt_yaw_value = delt_yaw_direct;
+        else
+            delt_yaw_value = - sup_yaw_direct_abs * delt_yaw_direct / delt_yaw_direct_abs;
 
     	/* Update and publish*/
     	target_point.x = target_x;

@@ -8,20 +8,22 @@
       <config projectName="uavInfo" targetName="rosgraph_msgs_generate_messages_nodejs" />
       <config projectName="uavInfo" targetName="download_extra_data" />
       <config projectName="uavInfo" targetName="geometry_msgs_generate_messages_nodejs" />
-      <config projectName="uavInfo" targetName="processData" />
       <config projectName="uavInfo" targetName="rosgraph_msgs_generate_messages_lisp" />
+      <config projectName="uavInfo" targetName="processData" />
       <config projectName="uavInfo" targetName="sensor_msgs_generate_messages_eus" />
       <config projectName="uavInfo" targetName="std_msgs_generate_messages_lisp" />
       <config projectName="uavInfo" targetName="run_tests" />
       <config projectName="uavInfo" targetName="sensor_msgs_generate_messages_nodejs" />
       <config projectName="uavInfo" targetName="rosgraph_msgs_generate_messages_cpp" />
       <config projectName="uavInfo" targetName="std_msgs_generate_messages_eus" />
+      <config projectName="uavInfo" targetName="gmock_main" />
       <config projectName="uavInfo" targetName="std_msgs_generate_messages_nodejs" />
       <config projectName="uavInfo" targetName="clean_test_results" />
       <config projectName="uavInfo" targetName="roscpp_generate_messages_py" />
       <config projectName="uavInfo" targetName="gtest" />
       <config projectName="uavInfo" targetName="roscpp_generate_messages_cpp" />
       <config projectName="uavInfo" targetName="rosgraph_msgs_generate_messages_py" />
+      <config projectName="uavInfo" targetName="gmock" />
       <config projectName="uavInfo" targetName="geometry_msgs_generate_messages_cpp" />
       <config projectName="uavInfo" targetName="tests" />
       <config projectName="uavInfo" targetName="sensor_msgs_generate_messages_cpp" />
@@ -54,16 +56,12 @@
   </component>
   <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
   <component name="FileEditorManager">
-    <leaf>
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="375">
       <file leaf-file-name="processData.cpp" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/processData.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="404">
-              <caret line="216" lean-forward="true" selection-start-line="216" selection-end-line="216" />
-              <folding>
-                <element signature="e#41#61#0" expanded="true" />
-                <marker date="1543578220462" expanded="true" signature="4449:4728" ph="..." />
-              </folding>
+            <state relative-caret-position="342">
+              <caret line="32" column="26" lean-forward="true" selection-start-line="32" selection-start-column="26" selection-end-line="32" selection-end-column="26" />
             </state>
           </provider>
         </entry>
@@ -73,6 +71,16 @@
   <component name="FindInProjectRecents">
     <findStrings>
       <find>outFile_pcd</find>
+      <find>callBackCmd</find>
+      <find>vel_cmd</find>
+      <find>angular_cmd</find>
+      <find>callBackTeleop</find>
+      <find>vel_teleop</find>
+      <find>vel_smoother</find>
+      <find>yaw_delt</find>
+      <find>yaw_current_y</find>
+      <find>yaw_current</find>
+      <find>num_uavdata</find>
     </findStrings>
   </component>
   <component name="IdeDocumentHistory">
@@ -103,6 +111,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -125,12 +134,11 @@
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/CMakeLists.txt" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
     <property name="nodejs_npm_path_reset_for_default_project" value="true" />
   </component>
@@ -156,6 +164,8 @@
     <configuration name="geometry_msgs_generate_messages_lisp" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="uavInfo" TARGET_NAME="geometry_msgs_generate_messages_lisp" CONFIG_NAME="Debug" />
     <configuration name="geometry_msgs_generate_messages_nodejs" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="uavInfo" TARGET_NAME="geometry_msgs_generate_messages_nodejs" CONFIG_NAME="Debug" />
     <configuration name="geometry_msgs_generate_messages_py" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="uavInfo" TARGET_NAME="geometry_msgs_generate_messages_py" CONFIG_NAME="Debug" />
+    <configuration name="gmock" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="uavInfo" TARGET_NAME="gmock" CONFIG_NAME="Debug" />
+    <configuration name="gmock_main" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="uavInfo" TARGET_NAME="gmock_main" CONFIG_NAME="Debug" />
     <configuration name="gtest" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="uavInfo" TARGET_NAME="gtest" CONFIG_NAME="Debug" />
     <configuration name="gtest_main" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="uavInfo" TARGET_NAME="gtest_main" CONFIG_NAME="Debug" />
     <configuration name="processData" type="CMakeRunConfiguration" factoryName="Application" PASS_PARENT_ENVS_2="true" PROJECT_NAME="uavInfo" TARGET_NAME="processData" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="uavInfo" RUN_TARGET_NAME="processData" />
@@ -216,6 +226,8 @@
       <item itemvalue="Application.tests" />
       <item itemvalue="Application.gtest" />
       <item itemvalue="Application.gtest_main" />
+      <item itemvalue="Application.gmock" />
+      <item itemvalue="Application.gmock_main" />
     </list>
   </component>
   <component name="SvnConfiguration">
@@ -230,23 +242,23 @@
       <updated>1543559994399</updated>
       <workItem from="1543559995636" duration="47000" />
       <workItem from="1543560376582" duration="9894000" />
+      <workItem from="1544074726534" duration="4076000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="9941000" />
+    <option name="totallyTimeSpent" value="14017000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="64" y="-11" width="1857" height="1092" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.24959569" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.1285558" />
       <window_info anchor="bottom" id="TODO" order="6" />
-      <window_info anchor="bottom" id="Messages" weight="0.32959184" />
       <window_info anchor="bottom" id="CMake" order="7" weight="0.3112245" />
       <window_info anchor="bottom" id="Event Log" order="7" side_tool="true" />
       <window_info anchor="bottom" id="Version Control" order="7" show_stripe_button="false" />
-      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.32959184" />
+      <window_info anchor="bottom" id="Run" order="2" weight="0.32959184" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info anchor="bottom" id="Terminal" order="7" />
       <window_info id="Favorites" order="2" side_tool="true" />
@@ -258,6 +270,7 @@
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Find" order="1" />
+      <window_info anchor="bottom" id="Messages" order="7" weight="0.32959184" />
     </layout>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -268,10 +281,17 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <option name="time" value="19" />
+      <option name="time" value="20" />
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/src/processData.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="4104">
+          <caret line="216" lean-forward="true" selection-start-line="216" selection-end-line="216" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="108">
@@ -309,12 +329,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/processData.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="404">
-          <caret line="216" lean-forward="true" selection-start-line="216" selection-end-line="216" />
-          <folding>
-            <element signature="e#41#61#0" expanded="true" />
-            <marker date="1543578220462" expanded="true" signature="4449:4728" ph="..." />
-          </folding>
+        <state relative-caret-position="342">
+          <caret line="32" column="26" lean-forward="true" selection-start-line="32" selection-start-column="26" selection-end-line="32" selection-end-column="26" />
         </state>
       </provider>
     </entry>

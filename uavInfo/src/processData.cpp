@@ -32,15 +32,18 @@ float position_radar_x = 0.0f;
 float position_radar_y = 0.0f;
 float vel_smoother = 0.0f;
 float angular_smoother = 0.0f;
-float vel_cmd = 0.0f;
-float angular_cmd = 0.0f;
+float vel_teleop = 0.0f;
+float angular_teleop = 0.0f;
 float pos_target_x = 0.0f;
 float pos_target_y = 0.0f;
 float yaw_target = 0.0f;
 float yaw_current = 0.0f;
+float yaw_current_x = 0.0f;
+float yaw_current_y = 0.0f;
 float yaw_delt = 0.0f;
 
-const int num_uavdata = 11;
+
+const int num_uavdata = 13;
 const int num_label = 4;
 const int img_width = 64;
 const int img_height = 64;
@@ -117,8 +120,9 @@ void CallbackPointCloud(const sensor_msgs::PointCloud2ConstPtr& cloud)
 
     timestamp = cloud->header.stamp;
     float tmp_uav[num_uavdata] = {position_odom_x, position_odom_y, vel_odom, angular_odom,
-                    position_radar_x, position_radar_y, pos_target_x, pos_target_y, yaw_target, yaw_current, yaw_delt};
-    float tmp_label[num_label] = {vel_cmd, angular_cmd, vel_smoother, angular_smoother};
+                    position_radar_x, position_radar_y, pos_target_x, pos_target_y, yaw_target,
+                                  yaw_current, yaw_current_x, yaw_current_y, yaw_delt};
+    float tmp_label[num_label] = {vel_smoother, angular_smoother, vel_teleop, angular_teleop};
     std::vector<float>data_label_tmp;
     std::vector<float>data_uav_tmp;
     data_uav_tmp.insert(data_uav_tmp.begin(), tmp_uav, tmp_uav+num_uavdata);
@@ -132,8 +136,9 @@ void CallbackPointCloud(const sensor_msgs::PointCloud2ConstPtr& cloud)
 
     for (int i_pt=0; i_pt<cloud_in->points.size(); ++i_pt) {
         auto point = cloud_in->points[i_pt];
+        
         float intensity;
-        intensity = point.data_c[0]/7.;
+        intensity = point.data_c[0]/7.f;
 
         int x_tmp;
         x_tmp = int((point.data[0] - position_odom_x) * 5 + 0.5f);
@@ -149,6 +154,7 @@ void CallbackPointCloud(const sensor_msgs::PointCloud2ConstPtr& cloud)
             int z_index = z_tmp + img_height / 2;
 //            cout<<"indx and info: "<<x_index<<' '<<y_index<<' '<<z_index<<' '<< intensity << endl;
             cloud_modified[x_index][y_index][z_index][0] = intensity;
+
         }
     }
     char c[20];
@@ -156,6 +162,7 @@ void CallbackPointCloud(const sensor_msgs::PointCloud2ConstPtr& cloud)
         for (int jj = 0; jj < img_width; ++jj) {
             for (int kk = 0; kk < img_height; ++kk) {
                 sprintf(c, "%f", cloud_modified[ii][jj][kk][0]);
+                if(cloud_modified[ii][jj][kk][0] > 0.15) cout << cloud_modified[ii][jj][kk][0] << "; ";
                 outFile_pcd << c << ",";
             }
         }
@@ -171,8 +178,8 @@ void callBackOdom(const nav_msgs::OdometryConstPtr& odom)
 {
     position_odom_x = odom->pose.pose.position.x;
     position_odom_y = odom->pose.pose.position.y;
-    vel_odom = odom->twist.twist.linear.x;
-    angular_odom = odom->twist.twist.angular.z;
+    vel_odom = odom->twist.twist.linear.x / 0.8f;
+    angular_odom = odom->twist.twist.angular.z / 0.8f;
 
 }
 
@@ -182,16 +189,16 @@ void callBackRadar(const geometry_msgs::Point::ConstPtr& data)
     pos_target_y = data->y;
 }
 
-void callBackCmd(const geometry_msgs::Twist::ConstPtr& data)
+void callBackTeleop(const geometry_msgs::Twist::ConstPtr& data)
 {
-    vel_cmd = data->linear.x;
-    angular_cmd = data->angular.z;
+    vel_teleop = data->linear.x / 0.8f;
+    angular_teleop = data->angular.z / 0.8f;
 }
 
-void callBackCmdSmoother(const geometry_msgs::Twist::ConstPtr& data)
+void callBackCmdMobileBase(const geometry_msgs::Twist::ConstPtr& data)
 {
-    vel_smoother = data->linear.x;
-    angular_smoother = data->angular.z;
+    vel_smoother = data->linear.x / 0.8f;
+    angular_smoother = data->angular.z / 0.8f;
 }
 
 void callBackTargetPos(const geometry_msgs::Point::ConstPtr& data)
@@ -202,17 +209,20 @@ void callBackTargetPos(const geometry_msgs::Point::ConstPtr& data)
 
 void callBackTargetYaw(const std_msgs::Float64::ConstPtr& data)
 {
-    yaw_target = data->data;
+    yaw_target = data->data / 3.15f;
 }
 
 void callBackCurrentYaw(const std_msgs::Float64::ConstPtr& data)
 {
-    yaw_current = data->data;
+    yaw_current = data->data / 3.15f;
+    yaw_current_x = cos(data->data);
+    yaw_current_y = sin(data->data);
 }
 
 void callBackDeltYaw(const std_msgs::Float64::ConstPtr& data)
 {
-    yaw_delt = data->data;
+    yaw_delt = data->data / 3.15f;
+
 }
 
 
@@ -233,10 +243,10 @@ int main(int argc, char** argv)
     outFile_uavdata.open(uav_data, ios::out);
     outFile_uavdata<<"position_odom_x"<<","<<"position_odom_y"<<","<<"vel_odom"<<","<<"angular_odom"
            <<","<<"position_radar_x"<<","<<"position_radar_y"<<","<<"pos_target_x"
-           <<","<<"pos_target_y"<<","<<"yaw_target" <<","<<"yaw_current"<<","<<"yaw_delt"<<endl;
+           <<","<<"pos_target_y"<<","<<"yaw_target" <<","<<"yaw_current"<<","<<yaw_current_x<<","<<yaw_current_y<<","<<"yaw_delt"<<endl;
 
     outFile_labels.open(label_data, ios::out);
-    outFile_labels<<"vel_cmd"<<","<<"angular_cmd"<<","<<"vel_smoother"<<","<<"angular_smoother"<<endl;
+    outFile_labels<<"vel_smoother"<<","<<"angular_smoother"<<","<<"vel_teleop"<<","<<"angular_teleop"<<endl;
 
     outFile_pcd.open(pcl_data, ios::out);
 
@@ -245,8 +255,8 @@ int main(int argc, char** argv)
     ros::Subscriber OdomCloud_sub = nh.subscribe("/ring_buffer/cloud_semantic", 2, CallbackPointCloud);
     ros::Subscriber Odom_sub = nh.subscribe("/odom", 2, callBackOdom);
     ros::Subscriber Radar_sub = nh.subscribe("/radar/current_point", 2, callBackRadar);
-    ros::Subscriber Cmd_sub = nh.subscribe("/mobile_base/commands/velocity", 2, callBackCmd);
-    ros::Subscriber CmdSmoother_sub = nh.subscribe("/teleop_velocity_smoother/raw_cmd_vel", 2, callBackCmdSmoother);
+    ros::Subscriber Cmd_sub = nh.subscribe("/mobile_base/commands/velocity", 2, callBackCmdMobileBase);
+    ros::Subscriber CmdSmoother_sub = nh.subscribe("/teleop_velocity_smoother/raw_cmd_vel", 2, callBackTeleop);
     ros::Subscriber TargetPos_sub = nh.subscribe("/radar/target_point", 2, callBackTargetPos);
     ros::Subscriber TargetYaw_sub = nh.subscribe("/radar/target_yaw", 2, callBackTargetYaw);
     ros::Subscriber CurrentYaw_sub = nh.subscribe("/radar/current_yaw", 2, callBackCurrentYaw);
