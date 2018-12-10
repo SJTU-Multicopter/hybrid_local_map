@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/ubuntu/catkin_ws/src/hybrid_local_map/uavInfo/cmake-build-debug/devel/setup.sh

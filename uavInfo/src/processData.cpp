@@ -16,6 +16,7 @@
 #include <fstream>
 #include <array>
 #include <time.h>
+#include <numeric>
 
 using namespace std;
 std::vector< std::vector<float> > data_pcl;
@@ -46,13 +47,16 @@ float yaw_delt = 0.0f;
 const int num_uavdata = 13;
 const int num_label = 4;
 const int img_width = 64;
-const int img_height = 64;
+//const int img_height = 64;
+const int img_height_uplimit = 32;
+const int img_height_downlimit = 4;
 const int info_dim = 1;
 
 
 ofstream outFile_uavdata;
 ofstream outFile_labels;
 ofstream outFile_pcd;
+ofstream outFile_intensity_proportion;
 
 
 void writeCsv(const std::vector<std::vector<float>> vec, const string& filename)
@@ -100,8 +104,8 @@ void writeCsvOneLine(const std::vector<float> uav_data, const std::vector<float>
 void CallbackPointCloud(const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
     static bool firstCome = true;
-    static array<array<array<array<float, info_dim>, img_height>, img_width>, img_width>cloud_modified;
-    static array<array<array<array<float, info_dim>, img_height>, img_width>, img_width>all_ones;
+    static array<array<array<array<float, info_dim>, img_height_uplimit-img_height_downlimit>, img_width>, img_width>cloud_modified;
+    static array<array<array<array<float, info_dim>, img_height_uplimit-img_height_downlimit>, img_width>, img_width>all_ones;
 
     if(firstCome) {
         firstCome = false;
@@ -109,7 +113,7 @@ void CallbackPointCloud(const sensor_msgs::PointCloud2ConstPtr& cloud)
             for (auto & l2 : l3) {
                 for (auto & l1 : l2) {
                     for (auto & f : l1) {
-                        f = 1/7.f;
+                        f = 0.0;  //unknown: 0
                     }
                 }
             }
@@ -128,17 +132,18 @@ void CallbackPointCloud(const sensor_msgs::PointCloud2ConstPtr& cloud)
     data_uav_tmp.insert(data_uav_tmp.begin(), tmp_uav, tmp_uav+num_uavdata);
     data_label_tmp.insert(data_label_tmp.begin(), tmp_label, tmp_label+num_label);
     writeCsvOneLine(data_uav_tmp, data_label_tmp);
-    cout<<"reading odom cloud data..."<<endl;
+//    cout<<"reading odom cloud data..."<<endl;
 
     // convert cloud to pcl form
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_in(new pcl::PointCloud<pcl::PointXYZI>());
     pcl::fromROSMsg(*cloud, *cloud_in);
-
+    vector<int> intensity_count = {0,0,0,0,0,0,0,0};
     for (int i_pt=0; i_pt<cloud_in->points.size(); ++i_pt) {
         auto point = cloud_in->points[i_pt];
         
         float intensity;
         intensity = point.data_c[0]/7.f;
+
 
         int x_tmp;
         x_tmp = int((point.data[0] - position_odom_x) * 5 + 0.5f);
@@ -147,22 +152,45 @@ void CallbackPointCloud(const sensor_msgs::PointCloud2ConstPtr& cloud)
         int z_tmp;
         z_tmp = int((point.data[2] - position_odom_z) * 5 + 0.5f);
 
-        if (fabs(x_tmp) < img_width/2 && fabs(y_tmp) < img_width/2 && fabs(z_tmp) < img_height/2)
+        if (fabs(x_tmp) < img_width/2 && fabs(y_tmp) < img_width/2 && img_height_downlimit < fabs(z_tmp) < img_height_uplimit)
         {
             int x_index = x_tmp + img_width / 2;
             int y_index = y_tmp + img_width / 2;
-            int z_index = z_tmp + img_height / 2;
+            int z_index = z_tmp + img_height_downlimit;
 //            cout<<"indx and info: "<<x_index<<' '<<y_index<<' '<<z_index<<' '<< intensity << endl;
             cloud_modified[x_index][y_index][z_index][0] = intensity;
-
+            int indensity_index;
+            indensity_index = int(point.data_c[0] + 0.49f);
+            intensity_count[indensity_index] += 1;
         }
     }
+
+    char c_intensity[20];
+    int intensity_sum = accumulate(intensity_count.begin(),intensity_count.end(),0);
+    int rest_unkown = img_width * img_width * (img_height_uplimit - img_height_downlimit) - intensity_sum;
+    for (int i_item=0; i_item<intensity_count.size();i_item++)
+    {
+        float item = intensity_count[i_item];
+
+        float item_proportion = item / (img_width * img_width * (img_height_uplimit - img_height_downlimit));
+        if (i_item == 1)     // unkown case
+        {
+            item_proportion = (item + rest_unkown) / (img_width * img_width * (img_height_uplimit - img_height_downlimit));
+        }
+        cout<< item_proportion <<endl;
+        sprintf(c_intensity, "%f", item_proportion);
+        outFile_intensity_proportion << c_intensity << ",";
+    }
+    cout<<endl;
+    outFile_intensity_proportion << endl;
+
+
     char c[20];
     for (int ii=0; ii<img_width; ++ii) {
         for (int jj = 0; jj < img_width; ++jj) {
-            for (int kk = 0; kk < img_height; ++kk) {
+            for (int kk = 0; kk < (img_height_uplimit-img_height_downlimit); ++kk) {
                 sprintf(c, "%f", cloud_modified[ii][jj][kk][0]);
-                if(cloud_modified[ii][jj][kk][0] > 0.15) cout << cloud_modified[ii][jj][kk][0] << "; ";
+//                if(cloud_modified[ii][jj][kk][0] > 0.15) cout << cloud_modified[ii][jj][kk][0] << "; "<<endl;
                 outFile_pcd << c << ",";
             }
         }
@@ -222,7 +250,6 @@ void callBackCurrentYaw(const std_msgs::Float64::ConstPtr& data)
 void callBackDeltYaw(const std_msgs::Float64::ConstPtr& data)
 {
     yaw_delt = data->data / 3.15f;
-
 }
 
 
@@ -232,23 +259,26 @@ int main(int argc, char** argv)
     char tmp[64];
     strftime( tmp, sizeof(tmp), "%Y_%m_%d_%X",localtime(&t) );
     cout<<tmp<<endl;
-    char uav_data[100];
-    sprintf(uav_data,"uav_data_%s.csv",tmp);
-    cout<<uav_data<<endl;
-    char label_data[100];
-    sprintf(label_data,"label_data_%s.csv",tmp);
-    char pcl_data[100];
-    sprintf(pcl_data,"pcl_data_%s.csv",tmp);
+    char c_uav_data[100];
+    sprintf(c_uav_data,"uav_data_%s.csv",tmp);
+    cout<<c_uav_data<<endl;
+    char c_label_data[100];
+    sprintf(c_label_data,"label_data_%s.csv",tmp);
+    char c_pcl_data[100];
+    sprintf(c_pcl_data,"pcl_data_%s.csv",tmp);
+    char c_intensity_proportion[100];
+    sprintf(c_intensity_proportion,"intensity_proportion_%s.csv",tmp);
 
-    outFile_uavdata.open(uav_data, ios::out);
-    outFile_uavdata<<"position_odom_x"<<","<<"position_odom_y"<<","<<"vel_odom"<<","<<"angular_odom"
-           <<","<<"position_radar_x"<<","<<"position_radar_y"<<","<<"pos_target_x"
-           <<","<<"pos_target_y"<<","<<"yaw_target" <<","<<"yaw_current"<<","<<yaw_current_x<<","<<yaw_current_y<<","<<"yaw_delt"<<endl;
+    outFile_uavdata.open(c_uav_data, ios::out);
+//    outFile_uavdata<<"position_odom_x"<<","<<"position_odom_y"<<","<<"vel_odom"<<","<<"angular_odom"
+//           <<","<<"position_radar_x"<<","<<"position_radar_y"<<","<<"pos_target_x"
+//           <<","<<"pos_target_y"<<","<<"yaw_target" <<","<<"yaw_current"<<","<<yaw_current_x<<","<<yaw_current_y<<","<<"yaw_delt"<<endl;
 
-    outFile_labels.open(label_data, ios::out);
-    outFile_labels<<"vel_smoother"<<","<<"angular_smoother"<<","<<"vel_teleop"<<","<<"angular_teleop"<<endl;
+    outFile_labels.open(c_label_data, ios::out);
+//    outFile_labels<<"vel_smoother"<<","<<"angular_smoother"<<","<<"vel_teleop"<<","<<"angular_teleop"<<endl;
 
-    outFile_pcd.open(pcl_data, ios::out);
+    outFile_pcd.open(c_pcl_data, ios::out);
+    outFile_intensity_proportion.open(c_intensity_proportion, ios::out);
 
     ros::init(argc, argv, "uavdataprocess");
     ros::NodeHandle nh;

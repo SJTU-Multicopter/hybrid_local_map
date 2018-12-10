@@ -14,7 +14,7 @@
 using namespace message_filters;
 using namespace std;
 
-#define MASK_DIST 6.4
+#define MASK_DIST 6.0
 
 float linear_v = 0.f;
 float angular_v = 0.f;

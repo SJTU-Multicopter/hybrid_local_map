@@ -1,4 +1,5 @@
 #include <ros/ros.h> 
+#include <std_msgs/Float64MultiArray.h> 
 #include <std_msgs/Float64.h> 
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Point.h>
@@ -57,10 +58,13 @@ int main(int argc, char **argv)
 	ros::Publisher target_yaw_pub = n.advertise<std_msgs::Float64>("/radar/target_yaw", 1); // Gloabl coordinate, same with robot odom coord
 	ros::Publisher current_yaw_pub = n.advertise<std_msgs::Float64>("/radar/current_yaw", 1);
 	ros::Publisher delt_yaw_pub = n.advertise<std_msgs::Float64>("/radar/delt_yaw", 1);
+    ros::Publisher direction_pub = n.advertise<std_msgs::Float64MultiArray>("/radar/direction", 1);
 
 	std_msgs::Float64 target_yaw;
 	std_msgs::Float64 current_yaw;
 	std_msgs::Float64 delt_yaw;
+    std_msgs::Float64MultiArray direction;
+
 	geometry_msgs::Point target_point;
 	geometry_msgs::Point current_point;
 
@@ -96,23 +100,6 @@ int main(int argc, char **argv)
 
     	/* Calculate delt yaw */
     	double delt_yaw_value = 0.0;
-    	// if(yaw_t * angle[2] < 0.0)  //avoid strange point 
-    	// {
-    	// 	if(yaw_t < 0.0)
-    	// 	{
-    	// 		delt_yaw_value = yaw_t + 2 * M_PI - angle[2];
-    	// 	}
-    	// 	else
-    	// 	{
-    	// 		delt_yaw_value = yaw_t - (2 * M_PI + angle[2]);
-    	// 	}
-    	// }
-    	// else
-    	// {
-    	// 	delt_yaw_value = yaw_t - angle[2];
-    	// }
-
-    	// if(fabs(delt_yaw_value) > 6.28) delt_yaw_value = 0.0;
 
         double delt_yaw_direct = yaw_t - angle[2];
         double delt_yaw_direct_abs = std::fabs(delt_yaw_direct);
@@ -122,6 +109,38 @@ int main(int argc, char **argv)
             delt_yaw_value = delt_yaw_direct;
         else
             delt_yaw_value = - sup_yaw_direct_abs * delt_yaw_direct / delt_yaw_direct_abs;
+
+        /* Calculate diraction */
+        direction.data.clear();
+        if(delt_yaw_value > -M_PI/4.0 && delt_yaw_value < M_PI/4.0)  // Move forward
+        {
+            direction.data.push_back(1.0);
+            direction.data.push_back(0.0);
+            direction.data.push_back(0.0);
+            direction.data.push_back(0.0);
+        }
+        else if(delt_yaw_value >= -3*M_PI/4.0 && delt_yaw_value <= -M_PI/4.0)  // Turn right
+        {
+            direction.data.push_back(0.0);
+            direction.data.push_back(0.0);
+            direction.data.push_back(0.0);
+            direction.data.push_back(1.0);
+        }
+        else if(delt_yaw_value >= M_PI/4.0 && delt_yaw_value <= 3*M_PI/4.0) // Turn left
+        {
+            direction.data.push_back(0.0);
+            direction.data.push_back(0.0);
+            direction.data.push_back(1.0);
+            direction.data.push_back(0.0);
+        }
+        else  // Move backward
+        {
+            direction.data.push_back(0.0);
+            direction.data.push_back(1.0);
+            direction.data.push_back(0.0);
+            direction.data.push_back(0.0);
+        }
+        direction_pub.publish(direction);
 
     	/* Update and publish*/
     	target_point.x = target_x;

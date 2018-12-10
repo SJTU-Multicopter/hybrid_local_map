@@ -13,7 +13,7 @@
 using namespace message_filters;
 using namespace std;
 
-#define MASK_DIST 6.4
+#define MASK_DIST 6.0
 
 void callback(const sensor_msgs::ImageConstPtr& depth, const sensor_msgs::ImageConstPtr& rgb)
 {

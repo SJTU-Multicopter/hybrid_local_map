@@ -246,7 +246,7 @@ class EuclideanDistanceNormalRingBuffer
                        pclp.x = p(0);
                        pclp.y = p(1);
                        pclp.z = p(2);
-                       pclp.intensity = 0.0;
+                       pclp.intensity = 1.0;
 
                         // // Consider x, y plain for fly direction
                         // double temp_x = pclp.x - center(0);

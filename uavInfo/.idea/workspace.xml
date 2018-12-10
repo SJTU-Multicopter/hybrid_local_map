@@ -2,41 +2,41 @@
 <project version="4">
   <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true" buildAllGenerated="true">
     <generated>
-      <config projectName="uavInfo" targetName="sensor_msgs_generate_messages_lisp" />
-      <config projectName="uavInfo" targetName="geometry_msgs_generate_messages_py" />
-      <config projectName="uavInfo" targetName="geometry_msgs_generate_messages_eus" />
-      <config projectName="uavInfo" targetName="rosgraph_msgs_generate_messages_nodejs" />
-      <config projectName="uavInfo" targetName="download_extra_data" />
-      <config projectName="uavInfo" targetName="geometry_msgs_generate_messages_nodejs" />
-      <config projectName="uavInfo" targetName="rosgraph_msgs_generate_messages_lisp" />
-      <config projectName="uavInfo" targetName="processData" />
-      <config projectName="uavInfo" targetName="sensor_msgs_generate_messages_eus" />
-      <config projectName="uavInfo" targetName="std_msgs_generate_messages_lisp" />
-      <config projectName="uavInfo" targetName="run_tests" />
-      <config projectName="uavInfo" targetName="sensor_msgs_generate_messages_nodejs" />
-      <config projectName="uavInfo" targetName="rosgraph_msgs_generate_messages_cpp" />
-      <config projectName="uavInfo" targetName="std_msgs_generate_messages_eus" />
+      <config projectName="uavInfo" targetName="std_msgs_generate_messages_py" />
       <config projectName="uavInfo" targetName="gmock_main" />
+      <config projectName="uavInfo" targetName="run_tests" />
+      <config projectName="uavInfo" targetName="gtest_main" />
+      <config projectName="uavInfo" targetName="sensor_msgs_generate_messages_eus" />
+      <config projectName="uavInfo" targetName="roscpp_generate_messages_nodejs" />
       <config projectName="uavInfo" targetName="std_msgs_generate_messages_nodejs" />
-      <config projectName="uavInfo" targetName="clean_test_results" />
-      <config projectName="uavInfo" targetName="roscpp_generate_messages_py" />
-      <config projectName="uavInfo" targetName="gtest" />
+      <config projectName="uavInfo" targetName="rosgraph_msgs_generate_messages_eus" />
+      <config projectName="uavInfo" targetName="rosgraph_msgs_generate_messages_lisp" />
       <config projectName="uavInfo" targetName="roscpp_generate_messages_cpp" />
       <config projectName="uavInfo" targetName="rosgraph_msgs_generate_messages_py" />
-      <config projectName="uavInfo" targetName="gmock" />
-      <config projectName="uavInfo" targetName="geometry_msgs_generate_messages_cpp" />
+      <config projectName="uavInfo" targetName="download_extra_data" />
       <config projectName="uavInfo" targetName="tests" />
-      <config projectName="uavInfo" targetName="sensor_msgs_generate_messages_cpp" />
-      <config projectName="uavInfo" targetName="sensor_msgs_generate_messages_py" />
-      <config projectName="uavInfo" targetName="doxygen" />
-      <config projectName="uavInfo" targetName="gtest_main" />
       <config projectName="uavInfo" targetName="roscpp_generate_messages_lisp" />
-      <config projectName="uavInfo" targetName="rosgraph_msgs_generate_messages_eus" />
+      <config projectName="uavInfo" targetName="std_msgs_generate_messages_eus" />
+      <config projectName="uavInfo" targetName="geometry_msgs_generate_messages_py" />
+      <config projectName="uavInfo" targetName="geometry_msgs_generate_messages_eus" />
+      <config projectName="uavInfo" targetName="sensor_msgs_generate_messages_cpp" />
+      <config projectName="uavInfo" targetName="gtest" />
+      <config projectName="uavInfo" targetName="rosgraph_msgs_generate_messages_nodejs" />
+      <config projectName="uavInfo" targetName="rosgraph_msgs_generate_messages_cpp" />
+      <config projectName="uavInfo" targetName="sensor_msgs_generate_messages_lisp" />
+      <config projectName="uavInfo" targetName="gmock" />
+      <config projectName="uavInfo" targetName="sensor_msgs_generate_messages_py" />
+      <config projectName="uavInfo" targetName="processData" />
       <config projectName="uavInfo" targetName="std_msgs_generate_messages_cpp" />
-      <config projectName="uavInfo" targetName="roscpp_generate_messages_nodejs" />
-      <config projectName="uavInfo" targetName="geometry_msgs_generate_messages_lisp" />
       <config projectName="uavInfo" targetName="roscpp_generate_messages_eus" />
-      <config projectName="uavInfo" targetName="std_msgs_generate_messages_py" />
+      <config projectName="uavInfo" targetName="geometry_msgs_generate_messages_cpp" />
+      <config projectName="uavInfo" targetName="std_msgs_generate_messages_lisp" />
+      <config projectName="uavInfo" targetName="clean_test_results" />
+      <config projectName="uavInfo" targetName="geometry_msgs_generate_messages_nodejs" />
+      <config projectName="uavInfo" targetName="geometry_msgs_generate_messages_lisp" />
+      <config projectName="uavInfo" targetName="roscpp_generate_messages_py" />
+      <config projectName="uavInfo" targetName="doxygen" />
+      <config projectName="uavInfo" targetName="sensor_msgs_generate_messages_nodejs" />
     </generated>
   </component>
   <component name="CMakeSettings">
@@ -60,8 +60,11 @@
       <file leaf-file-name="processData.cpp" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/processData.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="342">
-              <caret line="32" column="26" lean-forward="true" selection-start-line="32" selection-start-column="26" selection-end-line="32" selection-end-column="26" />
+            <state relative-caret-position="378">
+              <caret line="100" column="13" lean-forward="true" selection-start-line="100" selection-start-column="13" selection-end-line="100" selection-end-column="13" />
+              <folding>
+                <element signature="e#41#61#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -70,7 +73,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>outFile_pcd</find>
       <find>callBackCmd</find>
       <find>vel_cmd</find>
       <find>angular_cmd</find>
@@ -81,6 +83,9 @@
       <find>yaw_current_y</find>
       <find>yaw_current</find>
       <find>num_uavdata</find>
+      <find>outFile_pcd</find>
+      <find>outFile</find>
+      <find>cout</find>
     </findStrings>
   </component>
   <component name="IdeDocumentHistory">
@@ -243,17 +248,20 @@
       <workItem from="1543559995636" duration="47000" />
       <workItem from="1543560376582" duration="9894000" />
       <workItem from="1544074726534" duration="4076000" />
+      <workItem from="1544149953458" duration="3380000" />
+      <workItem from="1544166095079" duration="4093000" />
+      <workItem from="1544320651520" duration="1483000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="14017000" />
+    <option name="totallyTimeSpent" value="22973000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="64" y="-11" width="1857" height="1092" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.1285558" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.1285558" />
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info anchor="bottom" id="CMake" order="7" weight="0.3112245" />
       <window_info anchor="bottom" id="Event Log" order="7" side_tool="true" />
@@ -267,10 +275,10 @@
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="bottom" id="Messages" order="7" weight="0.32959184" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info anchor="bottom" id="Messages" order="7" weight="0.32959184" />
     </layout>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -285,6 +293,36 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/src/processData.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2793">
+          <caret line="147" column="18" lean-forward="true" selection-start-line="147" selection-start-column="18" selection-end-line="147" selection-end-column="18" />
+          <folding>
+            <element signature="e#41#61#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/processData.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="4617">
+          <caret line="243" lean-forward="true" selection-start-line="243" selection-end-line="243" />
+          <folding>
+            <element signature="e#41#61#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/processData.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="608">
+          <caret line="32" column="26" lean-forward="true" selection-start-line="32" selection-start-column="26" selection-end-line="32" selection-end-column="26" />
+          <folding>
+            <element signature="e#41#61#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/processData.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="4104">
@@ -329,8 +367,11 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/processData.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="342">
-          <caret line="32" column="26" lean-forward="true" selection-start-line="32" selection-start-column="26" selection-end-line="32" selection-end-column="26" />
+        <state relative-caret-position="378">
+          <caret line="100" column="13" lean-forward="true" selection-start-line="100" selection-start-column="13" selection-end-line="100" selection-end-column="13" />
+          <folding>
+            <element signature="e#41#61#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
