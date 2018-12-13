@@ -22,10 +22,31 @@ const int route[point_num] ={2, 3, 7, 8, 11};
 const double close_dist = 2.0;
 
 
-
 /* Variables */
 double position[3]={0.0, 0.0, 0.0};
 double angle[3] = {0.0, 0.0, 0.0};
+
+
+
+void drawArrow(cv::Mat& img, cv::Point pStart, cv::Point pEnd, int len, int alpha, cv::Scalar color, int thickness, int lineType)
+{
+    const double PI = 3.1415926;
+    Point arrow;
+    double angle = atan2((double)(pStart.y - pEnd.y), (double)(pStart.x - pEnd.x));
+    line(img, pStart, pEnd, color, thickness, lineType);
+    arrow.x = pEnd.x + len * cos(angle + PI * alpha / 180);
+
+    arrow.y = pEnd.y + len * sin(angle + PI * alpha / 180);
+
+    line(img, pEnd, arrow, color, thickness, lineType);
+
+    arrow.x = pEnd.x + len * cos(angle - PI * alpha / 180);
+
+    arrow.y = pEnd.y + len * sin(angle - PI * alpha / 180);
+
+    line(img, pEnd, arrow, color, thickness, lineType);
+}
+
 
 void odometryCallback(const nav_msgs::Odometry& msg)
 {
@@ -52,6 +73,7 @@ int main(int argc, char **argv)
 	ros::Subscriber yaw_sub= n.subscribe("/odom",1,odometryCallback); 
 
 	namedWindow( "Compass", CV_WINDOW_AUTOSIZE );
+	namedWindow( "Command", CV_WINDOW_AUTOSIZE );
 
 	ros::Publisher target_pos_pub = n.advertise<geometry_msgs::Point>("/radar/target_point", 1);  // Gloabl coordinate, not robot odom coord
 	ros::Publisher current_pos_pub = n.advertise<geometry_msgs::Point>("/radar/current_point", 1); // Gloabl coordinate, not robot odom coord
@@ -112,26 +134,30 @@ int main(int argc, char **argv)
 
         /* Calculate diraction */
         direction.data.clear();
-        if(delt_yaw_value > -M_PI/4.0 && delt_yaw_value < M_PI/4.0)  // Move forward
+        int command_type = 0;
+        if(delt_yaw_value > -M_PI/6.0 && delt_yaw_value < M_PI/6.0)  // Move forward
         {
             direction.data.push_back(1.0);
             direction.data.push_back(0.0);
             direction.data.push_back(0.0);
             direction.data.push_back(0.0);
+            command_type = 0;
         }
-        else if(delt_yaw_value >= -3*M_PI/4.0 && delt_yaw_value <= -M_PI/4.0)  // Turn right
+        else if(delt_yaw_value >= -5*M_PI/6.0 && delt_yaw_value <= -M_PI/6.0)  // Turn right
         {
             direction.data.push_back(0.0);
             direction.data.push_back(0.0);
             direction.data.push_back(0.0);
             direction.data.push_back(1.0);
+            command_type = 3;
         }
-        else if(delt_yaw_value >= M_PI/4.0 && delt_yaw_value <= 3*M_PI/4.0) // Turn left
+        else if(delt_yaw_value >= M_PI/6.0 && delt_yaw_value <= 5*M_PI/6.0) // Turn left
         {
             direction.data.push_back(0.0);
             direction.data.push_back(0.0);
             direction.data.push_back(1.0);
             direction.data.push_back(0.0);
+            command_type = 2;
         }
         else  // Move backward
         {
@@ -139,6 +165,7 @@ int main(int argc, char **argv)
             direction.data.push_back(1.0);
             direction.data.push_back(0.0);
             direction.data.push_back(0.0);
+            command_type = 1;
         }
         direction_pub.publish(direction);
 
@@ -180,7 +207,32 @@ int main(int argc, char **argv)
     	line(img, p, p_dsr, Scalar(0, 0, 255), 4);
 
     	imshow("Compass", img);
+
+    	/* Draw command */
+    	Mat img2(300, 300, CV_8UC3, Scalar(0,0,0));
+    	Point pStart(150, 150);
+    	Point pEnd;
+    	if(command_type == 0){
+    		pEnd.x = 150;
+    		pEnd.y = 50;
+    	}
+    	else if(command_type == 1){
+    		pEnd.x = 150;
+    		pEnd.y = 250;
+    	}
+    	else if(command_type == 2){
+    		pEnd.x = 50;
+    		pEnd.y = 150;
+    	}
+    	else{
+    		pEnd.x = 250;
+    		pEnd.y = 150;
+    	}
+		drawArrow(img2, pStart, pEnd, 25, 30, Scalar(0, 0, 255), 3, 4); 	
+
+    	imshow("Command", img2);
     	waitKey(5);
+
 
     	ros::spinOnce(); 
     	loop_rate.sleep();
