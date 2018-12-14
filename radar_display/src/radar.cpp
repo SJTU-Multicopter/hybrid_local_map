@@ -16,7 +16,7 @@ bool updated_2 = false;
 bool init_recored = false;
 
 void yawCallback(const std_msgs::Float64& msg)
-{ 
+{
 	if(!updated_1)
 	{
 		current_yaw = msg.data;

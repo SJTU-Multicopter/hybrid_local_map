@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(radar_display)
 
+add_definitions(-std=c++11 -g -O3 -ftree-vectorize -march=native)
 
 find_package(catkin REQUIRED COMPONENTS roscpp cv_bridge message_filters sensor_msgs image_transport)
 find_package(OpenCV REQUIRED)

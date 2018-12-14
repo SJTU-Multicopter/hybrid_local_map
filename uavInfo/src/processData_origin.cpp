@@ -11,17 +11,6 @@
 #include <geometry_msgs/PointStamped.h>
 #include <std_msgs/Float64.h>
 
-
-#include <termios.h>  
-#include <signal.h>  
-#include <math.h>  
-#include <stdio.h>  
-#include <stdlib.h>  
-#include <sys/poll.h>  
- 
-#include <boost/thread/thread.hpp>  
-
-
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -33,18 +22,6 @@ using namespace std;
 std::vector< std::vector<float> > data_pcl;
 std::vector< std::vector<float> > data_uav;
 std::vector< std::vector<float> > data_label;
-
-// keyboard definitions:
-#define KEYCODE_W 0x77  
-#define KEYCODE_A 0x61  
-#define KEYCODE_S 0x73  
-#define KEYCODE_D 0x64  
- 
-#define KEYCODE_A_CAP 0x41  
-#define KEYCODE_D_CAP 0x44  
-#define KEYCODE_S_CAP 0x53  
-#define KEYCODE_W_CAP 0x57  
-
 
 ros::Time timestamp;
 float vel_odom = 0.0f;
@@ -79,28 +56,11 @@ const int img_height_uplimit = 20;
 const int img_height_downlimit = 4;
 const int info_dim = 1;
 
-int writing_lock = 1;  // 0:writing 1: writing finished 2:reading 3:reading finished
-
-array<array<array<array<float, info_dim>, img_height_uplimit + img_height_downlimit>, img_width>, img_width>cloud_modified;
-array<array<array<array<float, info_dim>, img_height_uplimit + img_height_downlimit>, img_width>, img_width>all_zeros;
-std::vector<float>data_label_tmp;
-std::vector<float>data_uav_tmp;
 
 ofstream outFile_uavdata;
 ofstream outFile_labels;
 ofstream outFile_pcd;
 ofstream outFile_intensity_proportion;
-
-// class SmartCarKeyboardTeleopNode  
-// {  
-//     private:
-//         bool dirty = false;
-//     public:  
-//         SmartCarKeyboardTeleopNode() { }
- 
-//         ~SmartCarKeyboardTeleopNode() { }  
-//         void keyboardLoop();   
-// };  
 
 
 void writeCsv(const std::vector<std::vector<float>> vec, const string& filename)
@@ -143,13 +103,9 @@ void writeCsvOneLine(const std::vector<float> uav_data, const std::vector<float>
 void CallbackPointCloud(const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
     static bool firstCome = true;
+    static array<array<array<array<float, info_dim>, img_height_uplimit + img_height_downlimit>, img_width>, img_width>cloud_modified;
+    static array<array<array<array<float, info_dim>, img_height_uplimit + img_height_downlimit>, img_width>, img_width>all_zeros;
 
-    while(writing_lock != 1)
-    {
-        ros::Duration(0.01).sleep();
-    }
-    writing_lock = 2;  //Reading
-    
     if(firstCome) {
         firstCome = false;
         for (auto & l3 : all_zeros) {
@@ -167,23 +123,22 @@ void CallbackPointCloud(const sensor_msgs::PointCloud2ConstPtr& cloud)
 
     timestamp = cloud->header.stamp;
     float tmp_uav[num_uavdata] = {position_odom_x, position_odom_y, vel_odom, angular_odom, position_radar_x, 
-                            position_radar_y, pos_target_x, pos_target_y, yaw_target,yaw_current, yaw_current_x, 
+                            position_radar_y, pos_target_x, pos_target_y, yaw_target, yaw_current, yaw_current_x, 
                             yaw_current_y, yaw_delt, yaw_forward, yaw_backward, yaw_leftward, yaw_rightward};
     float tmp_label[num_label] = {vel_smoother, angular_smoother, vel_teleop, angular_teleop};
-    
-    data_uav_tmp.clear();
-    data_label_tmp.clear();
-    data_uav_tmp.insert(data_uav_tmp.begin(), tmp_uav, tmp_uav + num_uavdata);
-    data_label_tmp.insert(data_label_tmp.begin(), tmp_label, tmp_label + num_label);
-    
+    std::vector<float>data_label_tmp;
+    std::vector<float>data_uav_tmp;
+    data_uav_tmp.insert(data_uav_tmp.begin(), tmp_uav, tmp_uav+num_uavdata);
+    data_label_tmp.insert(data_label_tmp.begin(), tmp_label, tmp_label+num_label);
+    writeCsvOneLine(data_uav_tmp, data_label_tmp);
+//    cout<<"reading odom cloud data..."<<endl;
 
     // convert cloud to pcl form
     pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_in(new pcl::PointCloud<pcl::PointXYZI>());
     pcl::fromROSMsg(*cloud, *cloud_in);
 
     vector<int> intensity_count = {0,0,0,0,0,0,0,0};
-    for (int i_pt=0; i_pt<cloud_in->points.size(); ++i_pt) 
-    {
+    for (int i_pt=0; i_pt<cloud_in->points.size(); ++i_pt) {
         auto point = cloud_in->points[i_pt];
         
         float intensity;
@@ -196,13 +151,12 @@ void CallbackPointCloud(const sensor_msgs::PointCloud2ConstPtr& cloud)
         int z_tmp;
         z_tmp = int((point.data[2] - position_odom_z) * 5 + 0.5f);
 
-        
-        if (abs(x_tmp) < img_width/2 && abs(y_tmp) < img_width/2 && z_tmp > - img_height_downlimit && z_tmp < img_height_uplimit)
+        if (abs(x_tmp) < img_width/2 && abs(y_tmp) < img_width/2 && z_tmp > -img_height_downlimit && z_tmp < img_height_uplimit)
         {
             int x_index = x_tmp + img_width / 2;
             int y_index = y_tmp + img_width / 2;
             int z_index = z_tmp + img_height_downlimit;
-            cout << "modifying the cloud matrix ... " << endl;
+//            cout<<"indx and info: "<<x_index<<' '<<y_index<<' '<<z_index<<' '<< intensity << endl;
             cloud_modified[x_index][y_index][z_index][0] = intensity;
 
             // To count persentage of each semantic label
@@ -217,20 +171,32 @@ void CallbackPointCloud(const sensor_msgs::PointCloud2ConstPtr& cloud)
     int intensity_sum = accumulate(intensity_count.begin(),intensity_count.end(),0);
     int rest_unkown = img_width * img_width * (img_height_uplimit + img_height_downlimit) - intensity_sum;
 
-    for (int i_item=0; i_item<intensity_count.size(); i_item++)
+    for (int i_item=0; i_item<intensity_count.size();i_item++)
     {
-        float num_i_item = intensity_count[i_item];
-        float item_proportion = num_i_item / (img_width * img_width * (img_height_uplimit + img_height_downlimit));
+        float item = intensity_count[i_item];
 
-        if (i_item == 0)     // unkown case
+        float item_proportion = item / (img_width * img_width * (img_height_uplimit + img_height_downlimit));
+        if (i_item == 1)     // unkown case
         {
-            item_proportion = (num_i_item + rest_unkown) / (img_width * img_width * (img_height_uplimit + img_height_downlimit));
+            item_proportion = (item + rest_unkown) / (img_width * img_width * (img_height_uplimit + img_height_downlimit));
         }
         sprintf(c_intensity, "%f", item_proportion);
         outFile_intensity_proportion << c_intensity << ",";
     }
     outFile_intensity_proportion << endl;
-    writing_lock = 3;  //Reading finished
+
+    // Write to csv to save
+    char c[20];
+    for (int ii=0; ii<img_width; ++ii) {
+        for (int jj = 0; jj < img_width; ++jj) {
+            for (int kk = 0; kk < (img_height_uplimit+img_height_downlimit); ++kk) {
+                sprintf(c, "%f", cloud_modified[ii][jj][kk][0]);
+                outFile_pcd << c << ",";
+            }
+        }
+    }
+
+    outFile_pcd << endl;
 
     return;
 }
@@ -242,6 +208,7 @@ void callBackOdom(const nav_msgs::OdometryConstPtr& odom)
     position_odom_y = odom->pose.pose.position.y;
     vel_odom = odom->twist.twist.linear.x / 0.8f;
     angular_odom = odom->twist.twist.angular.z / 0.8f;
+
 }
 
 void callBackRadar(const geometry_msgs::Point::ConstPtr& data)
@@ -314,88 +281,6 @@ void callBackDeltYaw(const std_msgs::Float64::ConstPtr& data)
 
 }
 
-int kfd = 0;  
-struct termios cooked, raw;  
-bool dirty = false;
-void keyboardLoop()
-{   
-    char c;  
-    // get the console in raw mode  
-    tcgetattr(kfd, &cooked);  
-    memcpy(&raw, &cooked, sizeof(struct termios));  
-    raw.c_lflag &=~ (ICANON | ECHO);  
-    raw.c_cc[VEOL] = 1;  
-    raw.c_cc[VEOF] = 2;  
-    tcsetattr(kfd, TCSANOW, &raw);  
- 
-    puts("Reading from keyboard, press s to save img and semantic map...");  
-
-    struct pollfd ufd;  
-    ufd.fd = kfd;  
-    ufd.events = POLLIN;  
- 
-    for(;;)  
-    {  
-        boost::this_thread::interruption_point();  
- 
-        // get the next event from the keyboard  
-        int num;  
- 
-        if ((num = poll(&ufd, 1, 250)) < 0)  {  
-            perror("poll():");  
-            return;  
-        }  
-        else if(num > 0)  {  
-            if(read(kfd, &c, 1) < 0)  
-            {  
-                perror("read():");  
-                return;  
-            }  
-        }  
-        else  {  
-            if (dirty == true)  
-            {  
-                cout << "should stop the robot! " << endl;
-                dirty = false;  
-            }  
- 
-            continue;  
-        }  
- 
-        switch(c)  
-        {  
-            case KEYCODE_S:  
-                cout << "reading keyboard: s, saving map!" << endl;
-                while(writing_lock != 3)
-                {
-                    ros::Duration(0.01).sleep();
-                }
-                writing_lock = 0;
-
-                // Write cloud data
-                char ch[30];
-                for (int ii=0; ii<img_width; ++ii) {
-                    for (int jj = 0; jj < img_width; ++jj) {
-                        for (int kk = 0; kk < (img_height_uplimit+img_height_downlimit); ++kk) {
-                            sprintf(ch, "%f", cloud_modified[ii][jj][kk][0]);
-                            cout << cloud_modified[ii][jj][kk][0];
-                            outFile_pcd << ch << ",";
-                        }
-                    }
-                }
-                outFile_pcd << endl;
-                //write states and labels data
-                writeCsvOneLine(data_uav_tmp, data_label_tmp);
-                dirty = true;
-                writing_lock = 1;
-                break;  
-                        
-            default:   
-                dirty = false;  
-        }  
-    }  
-}
-
 
 int main(int argc, char** argv)
 {
@@ -415,19 +300,17 @@ int main(int argc, char** argv)
     sprintf(c_intensity_proportion,"intensity_proportion_%s.csv",tmp);
 
     outFile_uavdata.open(c_uav_data, ios::out);
+//    outFile_uavdata<<"position_odom_x"<<","<<"position_odom_y"<<","<<"vel_odom"<<","<<"angular_odom"
+//           <<","<<"position_radar_x"<<","<<"position_radar_y"<<","<<"pos_target_x"
+//           <<","<<"pos_target_y"<<","<<"yaw_target" <<","<<"yaw_current"<<","<<yaw_current_x<<","<<yaw_current_y<<","<<"yaw_delt"<<endl;
 
     outFile_labels.open(c_label_data, ios::out);
+//    outFile_labels<<"vel_smoother"<<","<<"angular_smoother"<<","<<"vel_teleop"<<","<<"angular_teleop"<<endl;
 
     outFile_pcd.open(c_pcl_data, ios::out);
     outFile_intensity_proportion.open(c_intensity_proportion, ios::out);
 
-    ros::init(argc, argv, "uavdataprocess", ros::init_options::AnonymousName | ros::init_options::NoSigintHandler);
-
-    // SmartCarKeyboardTeleopNode tbk;  
-
-    boost::thread thread_imgsave = boost::thread(boost::bind(&keyboardLoop));  
-    // boost::thread thread_imgsave = boost::thread(boost::bind(&SmartCarKeyboardTeleopNode::keyboardLoop, &tbk));  
-
+    ros::init(argc, argv, "uavdataprocess");
     ros::NodeHandle nh;
     ros::Subscriber OdomCloud_sub = nh.subscribe("/ring_buffer/cloud_semantic", 2, CallbackPointCloud);
     ros::Subscriber Odom_sub = nh.subscribe("/odom", 2, callBackOdom);
@@ -438,15 +321,8 @@ int main(int argc, char** argv)
     ros::Subscriber TargetYaw_sub = nh.subscribe("/radar/target_yaw", 2, callBackTargetYaw);
     ros::Subscriber CurrentYaw_sub = nh.subscribe("/radar/current_yaw", 2, callBackCurrentYaw);
     ros::Subscriber DeltYaw_sub = nh.subscribe("/radar/delt_yaw", 2, callBackDeltYaw);
-
     ros::spin();
-
-    thread_imgsave.interrupt();  
-    thread_imgsave.join();  
-    tcsetattr(kfd, TCSANOW, &cooked);  
-
     outFile_uavdata.close();
     outFile_labels.close();
     return 0;
 }
-

@@ -1,6 +1,5 @@
 #include <ros/ros.h> 
 #include <std_msgs/Float64MultiArray.h> 
-#include <gazebo_msgs/ModelStates.h>
 #include <std_msgs/Float64.h> 
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Point.h>
@@ -8,44 +7,25 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include <cmath>
 #include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
-
-#define random(x) (rand()%x)
-
-template<class T>
-int length(T& arr)
-{
-    //cout << sizeof(arr[0]) << endl;
-    //cout << sizeof(arr) << endl;
-    return sizeof(arr) / sizeof(arr[0]);
-}
-
 
 using namespace cv;
-using namespace std;
-/* Values about map: crossing points in the map */
-const double points[17][2] = {{-19, -10.25}, {-1.5, -10.25}, {7.5, -10.25}, {18.5, -10.25}, {-19, 0.0}, {-1.5, 0.0}, 
-						{7.5, 0.0}, {18.5, 0.0}, {-19, 6.25}, {-8.75, 6.25}, {-1.5, 6.25}, {7.5, 6.25}, {18.5, 6.25},\
-						{-19, 11},{-8.75, 11},{7.5, 11},{18.5, 11}};
 
-std::vector<std::vector<float> > all_points;
+/* Values about map and route */
+const double points[12][2] = {{-15, -12.7}, {-23, -6.6}, {-16, -6.5}, {13, -6.8}, {-23, 1.3}, {-16.1, 1.3}, 
+						{-4, 1.3}, {13, 1.3}, {23, 1.3}, {-3.8, 6.8}, {12.83, 6.7}, {23, 5}};
 
-int cur_position_index = 0;
-int last_position_index = 0;
+const double spawn_position[2] = {-16, -6.5};
 
+const int point_num = 5;
+const int route[point_num] ={2, 3, 7, 8, 11}; 
 
-const double spawn_position[2] = {-19, -10.25};
-
-const double close_dist[17] = {1.75, 1.75, 1.75, 1.75, 
-								1.5, 1.6, 1.6, 1.6, 
-								1.5, 1.5, 1.6, 1.6, 1.6, 
-								1.2, 1.5, 1.6, 1.6};
+const double close_dist = 2.0;
 
 
 /* Variables */
 double position[3]={0.0, 0.0, 0.0};
 double angle[3] = {0.0, 0.0, 0.0};
+
 
 
 void drawArrow(cv::Mat& img, cv::Point pStart, cv::Point pEnd, int len, int alpha, cv::Scalar color, int thickness, int lineType)
@@ -67,111 +47,30 @@ void drawArrow(cv::Mat& img, cv::Point pStart, cv::Point pEnd, int len, int alph
     line(img, pEnd, arrow, color, thickness, lineType);
 }
 
-void groundtruthCallback(const gazebo_msgs::ModelStates& msg)
+
+void odometryCallback(const nav_msgs::Odometry& msg)
 {
-	int num_model = msg.name.size();
-	if (std::strcmp(msg.name[num_model-1].c_str(),"mobile_base")){
-		cout << "Attention! Got the wrong object from model_states!! not the mobile base!!"<<endl 
-			 << "Object got from model_states: " << msg.name[num_model-1].c_str() << endl;
-	}
+	position[0] = msg.pose.pose.position.x + spawn_position[0];
+	position[1] = msg.pose.pose.position.y + spawn_position[1];
+	position[2] = msg.pose.pose.position.z;
 
-	position[0] = msg.pose[num_model-1].position.x;
-	position[1] = msg.pose[num_model-1].position.y;
-	position[2] = msg.pose[num_model-1].position.z;
-
-	float q0 = msg.pose[num_model-1].orientation.x;
-	float q1 = msg.pose[num_model-1].orientation.y;
-	float q2 = msg.pose[num_model-1].orientation.z;
-	float q3 = msg.pose[num_model-1].orientation.w;
+	float q0 = msg.pose.pose.orientation.x;
+	float q1 = msg.pose.pose.orientation.y;
+	float q2 = msg.pose.pose.orientation.z;
+	float q3 = msg.pose.pose.orientation.w;
 
 	/* Pitch roll may be needed for MAVs */
 	angle[2] = atan2(2*q3*q2 + 2*q0*q1, -2*q1*q1 - 2*q2*q2 + 1);  // Yaw
 
 }
 
-void init_map(std::vector<std::vector<int> > arrays, std::map<int, std::vector<int> >& adj_map)
-{
-    std::cout<<"begin map initialization.."<<std::endl;
-    int i = 0;
-    for (auto & item_array : arrays)
-    {
-        adj_map[i] = item_array;
-        i++;
-    }
-}
 
-std::vector<float> generate_global_target(int& cur_point_index, int& last_point_index,
-                            std::map<int, std::vector<int> > adj_map, std::vector<std::vector<float> > all_points)
-{
-    int num_adj = adj_map[cur_point_index].size(); //number of adjacents
-    int rand_index = random(num_adj); // random index among the adjacents
-    int random_next_index = adj_map[cur_point_index][rand_index];
-
-    while (random_next_index == last_point_index)
-    {
-        rand_index = random(num_adj);
-        random_next_index = adj_map[cur_point_index][rand_index];
-    }
-    
-    vector<float> current_target = all_points[random_next_index];
-    last_point_index = cur_point_index;
-    cur_point_index = random_next_index;
-    return current_target;
-}
-
-int main(int argc, char **argv)
+int main(int argc, char **argv) 
 { 
-	for (auto& pt : points)
-	{
-		std::vector<float> v;
-		v.push_back(pt[0]);
-		v.push_back(pt[1]);
-    	all_points.push_back(v);
-	}
-
-    map<int, std::vector<int> > adj_map;
-
-    std::vector<std::vector<int> > adj_vecs;
-
-    //Set adjacent points for each point in the point set:
-    adj_vecs.push_back({1, 4});
-    adj_vecs.push_back({0, 2, 5});
-    adj_vecs.push_back({1, 3, 6});
-    adj_vecs.push_back({2, 7});
-    adj_vecs.push_back({0, 5, 8});
-    adj_vecs.push_back({1, 4, 6, 10});
-    adj_vecs.push_back({2, 5, 7, 11});
-    adj_vecs.push_back({3, 6, 12});
-    adj_vecs.push_back({4, 9, 13});
-    adj_vecs.push_back({8, 10, 14});
-    adj_vecs.push_back({5, 9, 11});
-    adj_vecs.push_back({6, 10, 12, 15});
-    adj_vecs.push_back({7, 11, 16});
-    adj_vecs.push_back({8, 14});
-    adj_vecs.push_back({9, 13, 15});
-    adj_vecs.push_back({11, 14, 16});
-    adj_vecs.push_back({12, 15});
-
-    init_map(adj_vecs, adj_map);
-    
-    for (int i=0; i<adj_map[cur_position_index].size(); i++)
-    {
-    	cout<<"check : adjacent indexes: "<< adj_map[cur_position_index][i]<<", ";
-    }
-    cout<<endl;
-    for (int i=0; i<adj_map[cur_position_index].size(); i++)
-    {
-    	cout<<"check : adjacent pos: "<< all_points[adj_map[cur_position_index][i]][0]<<", " <<all_points[adj_map[cur_position_index][i]][1]<<", ";
-    }
-    cout<<endl;
-
-    std::vector<float> next_target_pt;
-    
 	ros::init(argc,argv,"global_path"); 
 	ros::NodeHandle n; 
 
-	// ros::Subscriber yaw_sub= n.subscribe("/odom",1,odometryCallback);
-	ros::Subscriber yaw_sub= n.subscribe("/gazebo/model_states",1,groundtruthCallback); 
+	ros::Subscriber yaw_sub= n.subscribe("/odom",1,odometryCallback); 
 
 	namedWindow( "Compass", CV_WINDOW_AUTOSIZE );
 	namedWindow( "Command", CV_WINDOW_AUTOSIZE );
@@ -191,35 +90,28 @@ int main(int argc, char **argv)
 	geometry_msgs::Point target_point;
 	geometry_msgs::Point current_point;
 
+	int route_point_counter = 0;
 
-	double target_x = all_points[cur_position_index][0];
-	double target_y = all_points[cur_position_index][1];
-	cout<<"initial target position: "<<"x: "<<target_x<<", y: "<<target_y<<endl;
+	double target_x = points[route[route_point_counter]][0];
+	double target_y = points[route[route_point_counter]][1];
+
     ros::Rate loop_rate(20);
 
     while(ros::ok())
     {
     	/* Close detection */
     	double dist_x = sqrt((target_x - position[0])*(target_x - position[0]) + (target_y - position[1])*(target_y - position[1]));
-    	if(dist_x < close_dist[cur_position_index]) 
+    	if(dist_x < close_dist) 
     	{
-    		cout<< " current close distance: "<< close_dist[cur_position_index]<<endl;
-    		cout << "You reached the target position!" << endl;
+    		route_point_counter += 1;
+    		if(route_point_counter >= point_num)
+    		{
+    			std::cout<< " You achieved the target!! Mission completed!!" << std::endl;
+    			break;
+    		}
 
-    		for (int i=0; i<adj_map[cur_position_index].size(); i++)
-		    {
-		    	cout<<"check : adjacent indexes: "<< adj_map[cur_position_index][i]<<endl
-		    		<<"check : adjacent pos: "<< all_points[adj_map[cur_position_index][i]][0]<<", " 
-		    		<<all_points[adj_map[cur_position_index][i]][1]<<endl;
-		    }
-
-		    cout << "current target position: " << cur_position_index << ", last target position: " << last_position_index << endl;
-    		next_target_pt = generate_global_target(cur_position_index,last_position_index,adj_map,all_points);
-    		target_x = next_target_pt[0];
-    		target_y = next_target_pt[1];
-
-    		cout << "new target position: " << "x: " << target_x << ", y: " << target_y << endl;
-    		
+    		target_x = points[route[route_point_counter]][0];
+			target_y = points[route[route_point_counter]][1];
     	}
 
     	/* Calculate target yaw */
