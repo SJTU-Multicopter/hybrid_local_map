@@ -20,7 +20,8 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/io/pcd_io.h>
-#include "/home/clarence/catkin_ws/devel/include/object_msgs/ObjectsInBoxes.h"
+//#include "object_msgs/ObjectsInBoxes.h"
+//#include "darknet_ros_msgs/BoundingBoxes.h"
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -43,13 +44,13 @@ static const int IMGHEIGHT = 480;
 static const bool save_pcds = false;
 static const string save_path = "/home/clarence/workspace/PointCloud/Gazebo_PCD_Training_data/";
 
-ewok::EuclideanDistanceNormalRingBuffer<POW>::Ptr rrb;
+//ewok::EuclideanDistanceNormalRingBuffer<POW>::Ptr rrb;
+ewok::EuclideanDistanceNormalRingBuffer<POW> rrb(resolution, 1.0);
 
 ros::Publisher occ_marker_pub, free_marker_pub, dist_marker_pub, norm_marker_pub;
 ros::Publisher cloud2_pub, cloud_fs_pub, cloud_semantic_pub, center_pub, traj_pub;
 
 bool objects_updated = false;
-
 
 
 unsigned char senantic_labels[IMGWIDTH][IMGHEIGHT];
@@ -95,68 +96,12 @@ void keyboardCallback(const geometry_msgs::Twist& msg)
     }
 }
 
-//CHG
-void objectsCallback(const object_msgs::ObjectsInBoxes& objects)
-{
-    if(objects_updated == false)
-    {
-        /*initialize labels*/
-        for(int i = 0; i < IMGWIDTH; i++)
-        {
-            for(int j = 0; j < IMGHEIGHT; j++)
-            {
-                senantic_labels[i][j] = 0;
-            }
-        }
 
-        /* Set labels of each roi. If there are overlaps, only take the last input label.*/
-        for (int m = 0; m < objects.objects_vector.size(); m++)
-        {
-            unsigned char label;
-            if(objects.objects_vector[m].object.object_name == "person")
-                label = 5;
-            else if(objects.objects_vector[m].object.object_name == "tvmonitor")
-                label = 4;
-            else if(objects.objects_vector[m].object.object_name == "chair")
-                label = 4;
-            else if(objects.objects_vector[m].object.object_name == "diningtable")
-                label = 4;
-            else if(objects.objects_vector[m].object.object_name == "sofa")
-                label = 4;
-            else
-                label = 3;
-
-            while(label_mat_locked)
-            {
-                ros::Duration(0.001).sleep(); // Sleep one second to wait for others using the label matirx
-            }
-
-            label_mat_locked = true;
-
-            int range_x_min = objects.objects_vector[m].roi.x_offset;
-            int range_x_max = objects.objects_vector[m].roi.x_offset + objects.objects_vector[m].roi.width;
-            int range_y_min = objects.objects_vector[m].roi.y_offset;
-            int range_y_max = objects.objects_vector[m].roi.y_offset + objects.objects_vector[m].roi.height;
-
-            for(int i = range_x_min; i <= range_x_max; i++)
-            {
-                for(int j = range_y_min; j <= range_y_max; j++)
-                {
-                    senantic_labels[i][j] = label;
-                }
-            }
-            label_mat_locked = false;
-
-            //cout << "Label=" <<(int)label<< endl;
-        }
-
-        objects_updated = true;
-    }
-}
 
 // this callback use input cloud to update ring buffer, and update odometry of UAV
 void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
+    ROS_INFO("Received Point Cloud!");
     _data_input_time = ros::Time::now();
 
     double elp = ros::Time::now().toSec() - _last_time.toSec();
@@ -277,9 +222,9 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
     if(!initialized)
     {
         Eigen::Vector3i idx;
-        rrb->getIdx(origin, idx);
+        rrb.getIdx(origin, idx);
         //ROS_INFO_STREAM("Origin: " << origin.transpose() << " idx " << idx.transpose());
-        rrb->setOffset(idx);
+        rrb.setOffset(idx);
         initialized = true;
     }
     else
@@ -288,12 +233,12 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
         while(true)
         {
             Eigen::Vector3i origin_idx, offset, diff;
-            rrb->getIdx(origin, origin_idx);
-            offset = rrb->getVolumeCenter();
+            rrb.getIdx(origin, origin_idx);
+            offset = rrb.getVolumeCenter();
             //std::cout << "origin :" << origin_idx << " center:" << offset << std::endl;
             diff = origin_idx - offset;
             if(diff.array().any())
-                rrb->moveVolume(diff.head<3>());
+                rrb.moveVolume(diff.head<3>());
             else
                 break;
         }
@@ -301,16 +246,16 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
 
     // insert point cloud to ringbuffer
     double t1 = ros::Time::now().toSec();
-    rrb->insertPointCloud(cloud_ew, origin);
+    rrb.insertPointCloud(cloud_ew, origin);
 
     // insert dynamic points to ringbuffer
     if(cloud_dynamic->width > 0)
-        rrb->insertPointCloudDynamic(cloud_dyn, origin);
+        rrb.insertPointCloudDynamic(cloud_dyn, origin);
 
     // Insert Semantic Info here, CHG
-    rrb->insertPointCloudSemanticLabel(*cloud_2, objects_updated);
+    rrb.insertPointCloudSemanticLabel(*cloud_2, objects_updated);
+    rrb.updateDistance();
 
-    rrb->updateDistance();
     double t2 = ros::Time::now().toSec();
     ROS_INFO("Updating ringbuffer time: %lf ms", 1000 * (t2 - t1));
 
@@ -329,7 +274,7 @@ void timerCallback(const ros::TimerEvent& e)
     /*Obstacle cloud*/
     pcl::PointCloud<pcl::PointXYZ> cloud;
     Eigen::Vector3d center;
-    rrb->getBufferAsCloud(cloud, center);
+    rrb.getBufferAsCloud(cloud, center);
 
     // convert to ROS message and publish
     sensor_msgs::PointCloud2 cloud2;
@@ -344,7 +289,7 @@ void timerCallback(const ros::TimerEvent& e)
     /* Free space cloud*/
     pcl::PointCloud<pcl::PointXYZ> free_cloud;
     Eigen::Vector3d center_fs;
-    rrb->getBufferFSCloud(free_cloud, center_fs);
+    rrb.getBufferFSCloud(free_cloud, center_fs);
 
     // convert to ROS message and publish
     sensor_msgs::PointCloud2 cloud2_fs;
@@ -355,12 +300,11 @@ void timerCallback(const ros::TimerEvent& e)
     cloud2_fs.header.frame_id = "world";
     cloud_fs_pub.publish(cloud2_fs);
 
-
     /* Semantic cloud */
     pcl::PointCloud<pcl::PointXYZI> semantic_cloud;
     Eigen::Vector3d center_s;
     // rrb->getBufferSemanticCloud(semantic_cloud, center_s, direction_x, direction_y);
-    rrb->getBufferObstacleSemanticCloud(semantic_cloud, center_s, direction_x, direction_y);
+    rrb.getBufferObstacleSemanticCloud(semantic_cloud, center_s, direction_x, direction_y);
 
     // convert to ROS message and publish
     sensor_msgs::PointCloud2 cloud2_semantic;
@@ -370,7 +314,6 @@ void timerCallback(const ros::TimerEvent& e)
     cloud2_semantic.header.stamp = ros::Time::now();
     cloud2_semantic.header.frame_id = "world";
     cloud_semantic_pub.publish(cloud2_semantic);
-    
 
     //publish center
     geometry_msgs::PointStamped center_p;
@@ -429,7 +372,7 @@ int main(int argc, char** argv)
     sync.registerCallback(boost::bind(&odomCloudCallback, _1, _2));
 
     // subscribe RGB image detection result. Delay is ignored!!! CHG
-    ros::Subscriber detection_sub = nh.subscribe("/objects", 2, objectsCallback);
+
     ros::Subscriber direction_sub =  nh.subscribe("/firefly/s_vec_init", 2, directionCallback);
     ros::Subscriber keyboard_sub =  nh.subscribe("/keyboard/twist", 2, keyboardCallback);
 
@@ -441,8 +384,8 @@ int main(int argc, char** argv)
     ros::Duration(0.5).sleep();
 
     // setup ring buffer
-    rrb = ewok::EuclideanDistanceNormalRingBuffer<POW>::Ptr(
-        new ewok::EuclideanDistanceNormalRingBuffer<POW>(resolution, 1.0));
+//    rrb = ewok::EuclideanDistanceNormalRingBuffer<POW>::Ptr(
+//        new ewok::EuclideanDistanceNormalRingBuffer<POW>(resolution, 1.0));
 
     _last_time = ros::Time::now();
     std::cout << "Start mapping!" << std::endl;

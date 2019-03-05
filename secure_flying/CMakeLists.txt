@@ -19,7 +19,7 @@ add_definitions(${PCL_DEFINITIONS})
 catkin_package()
 
 include_directories(${PCL_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS})
-include_directories(${EIGEN3_INCLUDE_DIR}) #${CHOLMOD_INCLUDE_DIR}#)
+# include_directories(${EIGEN3_INCLUDE_DIR}) #${CHOLMOD_INCLUDE_DIR}#)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/../ewok_ring_buffer/include)
 include_directories(${PROJECT_SOURCE_DIR}/../ewok_optimization/include)
@@ -31,5 +31,12 @@ include_directories(${PROJECT_SOURCE_DIR}/../ewok_poly_spline/include)
 
 add_executable(mapping src/mapping.cpp)
 target_link_libraries(mapping ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+
+add_executable(simple_mapping src/simple_mapping.cpp)
+target_link_libraries(simple_mapping ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+
+add_executable(local_planning src/local_planning.cpp)
+target_link_libraries(local_planning ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+
 
 
