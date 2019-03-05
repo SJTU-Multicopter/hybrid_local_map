@@ -76,7 +76,7 @@ struct  Path_Planning_Parameters
     double kk_h = 1; //% FOV horisontal cost coefficient
     double kk_v = 1; //% FOV vertical cost coefficient
     double v_max_ori = 5; //% m/s, just reference
-    double v_scale_min = 0.4;
+    double v_scale_min = 0.1;
     double delt_t = 0.05; //%time interval between two control points
     int max_plan_num = 100;
 }pp;
