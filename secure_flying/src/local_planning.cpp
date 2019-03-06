@@ -16,8 +16,9 @@
 #include <geometry_msgs/PointStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/Imu.h>
 #include <std_msgs/Float64MultiArray.h>
-
+#include <visualization_msgs/Marker.h>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/point_types.h>
@@ -34,6 +35,7 @@ using namespace message_filters;
 
 // global declaration
 ros::Time _data_input_time;
+ros::Time _algorithm_time;
 
 bool initialized = false;
 const double resolution = 0.2;
@@ -41,13 +43,19 @@ const double resolution = 0.2;
 static const int POW = 6;
 static const int N = (1 << POW);
 
+const float cal_duration = 0.05;
+
 ewok::EuclideanDistanceNormalRingBuffer<POW> rrb(resolution, 1.0);
 
-ros::Publisher occ_marker_pub, free_marker_pub, dist_marker_pub, norm_marker_pub;
-ros::Publisher cloud2_pub, cloud_fs_pub, cloud_semantic_pub, center_pub, traj_pub;
+ros::Publisher current_marker_pub;
+ros::Publisher cloud2_pub, center_pub;
 
 bool objects_updated = false;
-
+bool odom_initilized = false;
+bool imu_initilized = false;
+bool state_locked = false;
+bool state_updating = false;
+bool in_safety_mode = false;
 
 /****** Parameters for path planning ******/
 const int ANGLE_H_NUM = 18;
@@ -58,12 +66,14 @@ Eigen::VectorXd Angle_v(ANGLE_V_NUM); // initiate later in the main function
 Eigen::MatrixXd F_cost;
 
 Eigen::Vector3d p_goal;
-Eigen::Vector3d p0; // Should be updated in a subscriber of the vehicle state
+Eigen::Vector3d p0;
 Eigen::Vector3d v0;
 Eigen::Vector3d a0;
 double yaw0 = 0.0;
 double theta_h_last = 0.0;
 double theta_v_last = 0.0;
+
+Eigen::Vector3d p_store;
 
 struct  Path_Planning_Parameters
 {
@@ -83,11 +93,10 @@ struct  Path_Planning_Parameters
 
 /**************************************************/
 
-
 // this callback use input cloud to update ring buffer, and update odometry of UAV
 void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
-    // ROS_INFO("Received Point Cloud!");
+    ROS_INFO("Received Point Cloud!");
     _data_input_time = ros::Time::now();
 
     tf::Quaternion q1(odom->pose.pose.orientation.x, odom->pose.pose.orientation.y,
@@ -218,6 +227,7 @@ void motion_primitives(Eigen::Vector3d p0, Eigen::Vector3d v0, Eigen::Vector3d a
     double delt_x = d*cos(theta_v)*cos(theta_h+yaw0);
     double delt_y = d*cos(theta_v)*sin(theta_h+yaw0);
     double delt_z = d*sin(theta_v);
+
     Eigen::Vector3d pf;
     pf << p0(0)+delt_x, p0(1)+delt_y, p0(2)+delt_z;
 
@@ -247,8 +257,10 @@ void motion_primitives(Eigen::Vector3d p0, Eigen::Vector3d v0, Eigen::Vector3d a
         double T3 = 2*delt_z/(vf(2)+v0(2)) * decay_parameter;
         T3 > T ? T = T3 : T = T;
     }
+    T > 30? T = 30 : T = T;
 
     int times = T / delt_t;
+
     p = Eigen::MatrixXd::Zero(times, 3);
     v = Eigen::MatrixXd::Zero(times, 3);
     a = Eigen::MatrixXd::Zero(times, 3);
@@ -268,83 +280,260 @@ void motion_primitives(Eigen::Vector3d p0, Eigen::Vector3d v0, Eigen::Vector3d a
 
         for(int jj=0; jj<times; jj++)
         {
-            double tt = (times + 1)*delt_t;
+            double tt = (jj + 1)*delt_t;
             t(jj) = tt;
             p(jj,ii) = alpha/120*pow(tt,5) + beta/24*pow(tt,4) + gamma/6*pow(tt,3) + a0(ii)/2*pow(tt,2) + v0(ii)*tt + p0(ii);
             v(jj,ii) = alpha/24*pow(tt,4) + beta/6*pow(tt,3) + gamma/2*pow(tt,2) + a0(ii)*tt + v0(ii);
             a(jj,ii) = alpha/6*pow(tt,3) + beta/2*pow(tt,2) + gamma*tt + a0(ii);
         }
     }
-
-
 }
 
-void trajectoryCallback(const ros::TimerEvent& e) {
-    // TODO: Safety strategy for emergency stop should be added here
+/* Publish markers to show the path in rviz */
+void marker_publish(Eigen::MatrixXd &Points) 
+{
+    visualization_msgs::Marker points, line_strip;
+    points.header.frame_id = line_strip.header.frame_id = "world";
+    points.header.stamp = line_strip.header.stamp = ros::Time::now();
+    points.action = line_strip.action = visualization_msgs::Marker::ADD;
+    points.ns = line_strip.ns = "points_and_lines";
 
-    /** Moition primitives **/
-    Eigen::Vector3d delt_p = p_goal - p0;
-    double phi_h = atan2(delt_p(1), delt_p(0)); //% horizental offset angle
-    double phi_v = atan2(delt_p(2), sqrt(delt_p(0) * delt_p(0) + delt_p(1) * delt_p(1))); //% vertical offset angle
+    points.id = 0;
+    line_strip.id = 1;
 
-    // %calculate cost for sampled points
-    Eigen::MatrixXd cost = Eigen::MatrixXd::Zero(ANGLE_H_NUM * ANGLE_V_NUM, 4);
-    double theta_h = 0;
-    double theta_v = 0;
+    points.type = visualization_msgs::Marker::POINTS;
+    line_strip.type = visualization_msgs::Marker::LINE_STRIP;
 
-    for(int i=0; i<ANGLE_H_NUM; i++)
+    points.scale.x = 0.2;
+    points.scale.y = 0.2;
+
+    // Line width
+    line_strip.scale.x = 0.1; 
+
+    // Points are green
+    points.color.g = 1.0;
+    points.color.a = 1.0;
+
+    // Line strip is blue
+    line_strip.color.b = 1.0;
+    line_strip.color.a = 1.0;
+
+    line_strip.lifetime = ros::Duration(0);
+
+    int point_num = Points.rows();
+
+    for(int i=0; i<point_num; i++)
     {
-        for(int j=0; j<ANGLE_V_NUM; j++)
-        {
-            theta_h = Angle_h(i);
-            theta_v = Angle_v(j);
-            int m = i*ANGLE_V_NUM + j; //sequence number
-            cost(m, 0) = pp.k1_xy*(yaw0+theta_h-phi_h)*(yaw0+theta_h-phi_h) + pp.k1_z*(theta_v-phi_v)*(theta_v-phi_v) +
-                    pp.k2_xy*(theta_h-theta_h_last)*(theta_h-theta_h_last)+pp.k2_z*(theta_v-theta_v_last)*(theta_v-theta_v_last) + pp.k3*F_cost(i,j);
-            cost(m, 1) = theta_h;
-            cost(m, 2) = theta_v;
-            cost(m, 3) = (1-F_cost(i,j)) * pp.d_ref;
-        }
+        geometry_msgs::Point p;
+        p.x = Points(i, 0);
+        p.y = Points(i, 1);
+        p.z = Points(i, 2);
+
+        ROS_INFO("p.x %lf", p.x);
+
+        points.points.push_back(p);
+        line_strip.points.push_back(p);
     }
 
-    //% Rank by cost, small to large
-    for(int m=0; m<ANGLE_H_NUM*ANGLE_V_NUM-1; m++)
+    current_marker_pub.publish(points);
+    current_marker_pub.publish(line_strip);
+}
+
+// void trajectoryCallback(Eigen::Vector3d &p_goal, Eigen::Vector3d &p0, Eigen::Vector3d &v0, Eigen::Vector3d &a0, double &yaw0) 
+void trajectoryCallback(const ros::TimerEvent& e) {
+    if(!state_updating)
     {
-        for(int n=0; n<ANGLE_H_NUM*ANGLE_V_NUM-m-1; n++)
+        state_locked = true;
+
+        // TODO: Safety strategy for emergency stop should be added here
+
+        /** Moition primitives **/
+        Eigen::Vector3d delt_p = p_goal - p0;
+        double phi_h = atan2(delt_p(1), delt_p(0)); //% horizental offset angle
+        double phi_v = atan2(delt_p(2), sqrt(delt_p(0) * delt_p(0) + delt_p(1) * delt_p(1))); //% vertical offset angle
+
+        // %calculate cost for sampled points
+        Eigen::MatrixXd cost = Eigen::MatrixXd::Zero(ANGLE_H_NUM * ANGLE_V_NUM, 4);
+        double theta_h = 0;
+        double theta_v = 0;
+
+        for(int i=0; i<ANGLE_H_NUM; i++)
         {
-            if(cost(n,0) > cost(n+1,0))
+            for(int j=0; j<ANGLE_V_NUM; j++)
             {
-                Eigen::Vector4d temp = cost.row(n+1);
-                cost.row(n+1) = cost.row(n);
-                cost.row(n) = temp;
+                theta_h = Angle_h(i);
+                theta_v = Angle_v(j);
+                int m = i*ANGLE_V_NUM + j; //sequence number
+                cost(m, 0) = pp.k1_xy*(yaw0+theta_h-phi_h)*(yaw0+theta_h-phi_h) + pp.k1_z*(theta_v-phi_v)*(theta_v-phi_v) +
+                        pp.k2_xy*(theta_h-theta_h_last)*(theta_h-theta_h_last)+pp.k2_z*(theta_v-theta_v_last)*(theta_v-theta_v_last) + pp.k3*F_cost(i,j);
+                cost(m, 1) = theta_h;
+                cost(m, 2) = theta_v;
+                cost(m, 3) = (1-F_cost(i,j)) * pp.d_ref;
             }
         }
+
+        //% Rank by cost, small to large
+        for(int m=0; m<ANGLE_H_NUM*ANGLE_V_NUM-1; m++)
+        {
+            for(int n=0; n<ANGLE_H_NUM*ANGLE_V_NUM-m-1; n++)
+            {
+                if(cost(n,0) > cost(n+1,0))
+                {
+                    Eigen::Vector4d temp = cost.row(n+1);
+                    cost.row(n+1) = cost.row(n);
+                    cost.row(n) = temp;
+                }
+            }
+        }
+
+        //% max velocity is decreased concerning current velocity direction and goal
+        //% direction
+        double v_scale = std::max(delt_p.dot(v0)/v0.norm()/delt_p.norm(), pp.v_scale_min);
+        double v_max = pp.v_max_ori * v_scale;
+
+        bool flag = false;
+        for(int seq=0; seq<pp.max_plan_num; seq++)
+        {
+            Eigen::MatrixXd p;
+            Eigen::MatrixXd v;
+            Eigen::MatrixXd a;
+            Eigen::VectorXd t;
+            motion_primitives(p0, v0, a0, yaw0, cost(seq,1), cost(seq,2), p_goal, cost(seq,3), v_max, pp.delt_t, p, v, a, t);
+
+            // for(int ii=0; ii<p.rows(); ii++)
+            // {
+            //     ROS_INFO("p(ii), %lf, %lf, %lf", p(ii, 0), p(ii, 1), p(ii, 2));
+            // }
+
+            ROS_INFO("p(ii), %lf, %lf", cost(seq,1), cost(seq,2));
+
+            const int Num = p.rows(); // get points number on the path
+            Eigen::Vector3f *sim_traj = new Eigen::Vector3f[Num];
+
+            for (int i = 0; i < Num; ++i) {
+                sim_traj[i] = p.row(i).cast<float>();
+            }
+        
+            float dist[Num] = {0};
+            flag = rrb.collision_checking(sim_traj, Num, 0.5, dist);
+            if (flag) {
+                ROS_INFO("traj_safe");
+                theta_h_last = cost(seq,1); // Update last theta
+                theta_v_last = cost(seq,2);
+
+                // Publish down sampled path points
+                const int point_num_pub = 5;
+                int interval_num = Num / point_num_pub;
+                if (interval_num > 0)
+                {
+                    Eigen::MatrixXd show_points = Eigen::MatrixXd::Zero(point_num_pub, 3);
+                    for(int pubi = 0; pubi < point_num_pub; pubi++)
+                    {
+                        show_points.row(pubi) = p.row(pubi*interval_num);
+                    }
+                    marker_publish(show_points);
+                }   
+
+                break;
+            } else {
+                ROS_INFO("traj_unsafe");
+            }
+
+        }
+
+        if(!flag){
+            in_safety_mode = true;
+
+            ROS_WARN("No valid trajectory found!");
+        }
+
+        double algo_time = ros::Time::now().toSec() - _algorithm_time.toSec();
+        ROS_INFO("algorithm time is: %lf", algo_time);
+        _algorithm_time = ros::Time::now();
+
+        // TODO: Publish the control values
+
+        state_locked = false;
     }
-
-    //% max velocity is decreased concerning current velocity direction and goal
-    //% direction
-    double v_scale = std::max(delt_p.dot(v0)/v0.norm()/delt_p.norm(), pp.v_scale_min);
-    double v_max = pp.v_max_ori * v_scale;
-
-    for(int seq=0; seq<pp.max_plan_num; seq++)
-    {
-        Eigen::MatrixXd p;
-        Eigen::MatrixXd v;
-        Eigen::MatrixXd a;
-        Eigen::VectorXd t;
-        motion_primitives(p0, v0, a0, yaw0, cost(seq,1), cost(seq,2), p_goal, cost(seq,3), v_max, pp.delt_t, p, v, a, t);
-
-        // TODO: Collision checking goes here
-    }
-
-    // TODO: Publish the control values
 
 }
+
+/*void stateCallBack(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs::ImuConstPtr& imu)
+{
+    ROS_INFO("State data!");
+    Eigen::Vector3d p_goal;
+    p_goal << 10, 0, 2;
+    Eigen::Vector3d p0;
+    p0 << odom->pose.pose.position.x, odom->pose.pose.position.y, odom->pose.pose.position.z; 
+    Eigen::Vector3d v0;
+    v0 << odom->twist.twist.linear.x, odom->twist.twist.linear.y, odom->twist.twist.linear.z; 
+    Eigen::Vector3d a0;
+    a0 << imu->linear_acceleration.x, imu->linear_acceleration.y, imu->linear_acceleration.z;
+
+    double x = imu->orientation.x; 
+    double y = imu->orientation.y; 
+    double z = imu->orientation.z; 
+    double w = imu->orientation.w; 
+    double yaw0 = atan2(2 * (x*y + w*z), w*w + x*x - y*y - z*z);
+    // ROS_WARN("yaw0 is: %lf", yaw0);
+
+    trajectoryCallback(p_goal, p0, v0, a0, yaw0);
+}*/
+
+void odomCallback(const nav_msgs::OdometryConstPtr& odom)
+{
+    if(!state_locked)
+    {
+        state_updating = true;
+
+        p0(0) = odom->pose.pose.position.x;
+        p0(1) = odom->pose.pose.position.y;
+        p0(2) = odom->pose.pose.position.z;
+
+        v0(0) = odom->twist.twist.linear.x;
+        v0(1) = odom->twist.twist.linear.y;
+        v0(2) = odom->twist.twist.linear.z;
+
+        if(!in_safety_mode)
+            p_store = p0;
+
+        state_updating = false;
+    }
+    odom_initilized = true;
+}
+
+void imuCallback(const sensor_msgs::ImuConstPtr& imu)
+{
+    if(!state_locked)
+    {
+        state_updating = true;
+
+        a0(0) = imu->linear_acceleration.x;
+        a0(1) = imu->linear_acceleration.y;
+        a0(2) = imu->linear_acceleration.z;
+
+        double x = imu->orientation.x; 
+        double y = imu->orientation.y; 
+        double z = imu->orientation.z; 
+        double w = imu->orientation.w; 
+        yaw0 = atan2(2 * (x*y + w*z), w*w + x*x - y*y - z*z);
+
+        state_updating = false;
+    }
+    imu_initilized = true;
+}
+
 
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "local_planning");
     ros::NodeHandle nh;
+
+    // State parameters initiate
+    p_goal << 0.0, 10.0, 2.0;
+    p0 << 0.0, 0.0, 0.0;
+    v0 << 0.0, 0.0, 0.0;
+    a0 << 0.0, 0.0, 0.0;
 
     // Fov sample parameters
     Fov_half << 35, 20;
@@ -374,22 +563,30 @@ int main(int argc, char** argv)
     // ringbuffer cloud2
     cloud2_pub = nh.advertise<sensor_msgs::PointCloud2>("ring_buffer/cloud_ob", 1, true);
     center_pub = nh.advertise<geometry_msgs::PointStamped>("ring_buffer/center",1,true) ;
+    current_marker_pub = nh.advertise<visualization_msgs::Marker>("visualization_marker", 1);
 
-    message_filters::Subscriber<nav_msgs::Odometry> odom_sub(nh, "/firefly/ground_truth/odometry", 1);
+    ros::Subscriber odom_isolate_sub =  nh.subscribe("/firefly/ground_truth/odometry", 1, odomCallback);
+    ros::Subscriber imu_sub =  nh.subscribe("/firefly/ground_truth/imu", 1, imuCallback);
+
+    message_filters::Subscriber<nav_msgs::Odometry> odom_sub(nh, "/firefly/ground_truth/odometry", 2);
     message_filters::Subscriber<sensor_msgs::PointCloud2> pcl_sub(nh, "/firefly/vi_sensor/camera_depth/depth/points", 1);
+    // message_filters::Subscriber<sensor_msgs::Imu> imu_sub(nh, "/firefly/ground_truth/imu", 2);
 
-    typedef sync_policies::ApproximateTime<nav_msgs::Odometry, sensor_msgs::PointCloud2> MySyncPolicy;
-    Synchronizer<MySyncPolicy> sync(MySyncPolicy(10), odom_sub, pcl_sub);
-    sync.registerCallback(boost::bind(&odomCloudCallback, _1, _2));
+    TimeSynchronizer<nav_msgs::Odometry, sensor_msgs::PointCloud2> sync(odom_sub, pcl_sub, 10);       
+    sync.registerCallback(boost::bind(&odomCloudCallback, _1, _2));   
+
+    // TimeSynchronizer<nav_msgs::Odometry, sensor_msgs::Imu> sync2(odom_sub, imu_sub, 10);       
+    // sync2.registerCallback(boost::bind(&stateCallBack, _1, _2));              
 
     // timer for publish ringbuffer as pointcloud
-    ros::Timer timer1 = nh.createTimer(ros::Duration(0.5), timerCallback); // RATE 2 Hz to publish
+    ros::Timer timer1 = nh.createTimer(ros::Duration(0.2), timerCallback); // RATE 5 Hz to publish
 
     // timer for trajectory generation
-    ros::Timer timer2 = nh.createTimer(ros::Duration(0.02), trajectoryCallback); // RATE 50 Hz to generate trajectory
+    ros::Timer timer2 = nh.createTimer(ros::Duration(cal_duration), trajectoryCallback); 
 
     std::cout << "Start mapping!" << std::endl;
 
+    // ros::spin();
     ros::AsyncSpinner spinner(4); // Use 4 threads
     spinner.start();
     ros::waitForShutdown();
