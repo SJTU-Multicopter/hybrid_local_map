@@ -33,6 +33,8 @@
 
 using namespace message_filters;
 
+#define GRAVATY 9.8
+
 // global declaration
 ros::Time _data_input_time;
 ros::Time _algorithm_time;
@@ -78,10 +80,10 @@ Eigen::Vector3d p_store;
 struct  Path_Planning_Parameters
 {
     double d_ref = 3.0;
-    double k1_xy = 4; //% Goal directed coefficient
-    double k1_z = 4; //% Goal directed coefficient
-    double k2_xy = 2; //% Rotation coefficient
-    double k2_z = 2; //% Rotation coefficient
+    double k1_xy = 2; //% Goal directed coefficient
+    double k1_z = 2; //% Goal directed coefficient
+    double k2_xy = 4; //% Rotation coefficient
+    double k2_z = 4; //% Rotation coefficient
     double k3 = M_PI*0.1; //% FOV coefficient
     double kk_h = 1; //% FOV horisontal cost coefficient
     double kk_v = 1; //% FOV vertical cost coefficient
@@ -257,9 +259,26 @@ void motion_primitives(Eigen::Vector3d p0, Eigen::Vector3d v0, Eigen::Vector3d a
         double T3 = 2*delt_z/(vf(2)+v0(2)) * decay_parameter;
         T3 > T ? T = T3 : T = T;
     }
-    T > 30? T = 30 : T = T;
+    T > 3? T = 3 : T = T;
 
     int times = T / delt_t;
+
+
+    // Show
+    // for(int i=0; i<3; i++)
+    // {
+    //     ROS_INFO("P0, %lf, %lf, %lf", p0(0), p0(1), p0(2));
+    //     ROS_INFO("V0, %lf, %lf, %lf", v0(0), v0(1), v0(2));
+    //     ROS_INFO("A0, %lf, %lf, %lf", a0(0), a0(1), a0(2));
+
+    //     ROS_INFO("Pf, %lf, %lf, %lf", pf(0), pf(1), pf(2));
+    //     ROS_INFO("Vf, %lf, %lf, %lf", vf(0), vf(1), vf(2));
+    //     ROS_INFO("Af, %lf, %lf, %lf", af(0), af(1), af(2));
+
+    //     ROS_INFO("T, %lf, yaw0, %lf, v_max, %lf, d, %lf", T, yaw0, v_max, d);
+    // }
+
+
 
     p = Eigen::MatrixXd::Zero(times, 3);
     v = Eigen::MatrixXd::Zero(times, 3);
@@ -405,17 +424,25 @@ void trajectoryCallback(const ros::TimerEvent& e) {
             //     ROS_INFO("p(ii), %lf, %lf, %lf", p(ii, 0), p(ii, 1), p(ii, 2));
             // }
 
-            ROS_INFO("p(ii), %lf, %lf", cost(seq,1), cost(seq,2));
+            // ROS_INFO("p(ii), %lf, %lf", cost(seq,1), cost(seq,2));
 
             const int Num = p.rows(); // get points number on the path
             Eigen::Vector3f *sim_traj = new Eigen::Vector3f[Num];
 
             for (int i = 0; i < Num; ++i) {
-                sim_traj[i] = p.row(i).cast<float>();
+                sim_traj[i](0) = (float)(p.row(i)(0) - p0(0));
+                sim_traj[i](1) = (float)(p.row(i)(1) - p0(1));
+                sim_traj[i](2) = (float)(p.row(i)(2) - p0(2));
             }
+
+            // for (int i = 0; i < Num; ++i) {
+            //     sim_traj[i](0) = (float)(p.row(i)(0) );
+            //     sim_traj[i](1) = (float)(p.row(i)(1) );
+            //     sim_traj[i](2) = (float)(p.row(i)(2) );
+            // }
         
             float dist[Num] = {0};
-            flag = rrb.collision_checking(sim_traj, Num, 0.5, dist);
+            flag = rrb.collision_checking(sim_traj, Num, 0.2, dist);
             if (flag) {
                 ROS_INFO("traj_safe");
                 theta_h_last = cost(seq,1); // Update last theta
@@ -426,11 +453,12 @@ void trajectoryCallback(const ros::TimerEvent& e) {
                 int interval_num = Num / point_num_pub;
                 if (interval_num > 0)
                 {
-                    Eigen::MatrixXd show_points = Eigen::MatrixXd::Zero(point_num_pub, 3);
+                    Eigen::MatrixXd show_points = Eigen::MatrixXd::Zero(point_num_pub+1, 3);
                     for(int pubi = 0; pubi < point_num_pub; pubi++)
                     {
                         show_points.row(pubi) = p.row(pubi*interval_num);
                     }
+                    show_points.row(point_num_pub) = p.row(Num-1);
                     marker_publish(show_points);
                 }   
 
@@ -510,7 +538,7 @@ void imuCallback(const sensor_msgs::ImuConstPtr& imu)
 
         a0(0) = imu->linear_acceleration.x;
         a0(1) = imu->linear_acceleration.y;
-        a0(2) = imu->linear_acceleration.z;
+        a0(2) = imu->linear_acceleration.z - GRAVATY;
 
         double x = imu->orientation.x; 
         double y = imu->orientation.y; 
@@ -530,7 +558,7 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
 
     // State parameters initiate
-    p_goal << 0.0, 10.0, 2.0;
+    p_goal << 10.0, 0.0, 2.0;
     p0 << 0.0, 0.0, 0.0;
     v0 << 0.0, 0.0, 0.0;
     a0 << 0.0, 0.0, 0.0;

@@ -548,6 +548,31 @@ class EuclideanDistanceNormalRingBuffer
         }
     }
 
+    bool collision_checking(Eigen::Vector3f *traj_points, int Num, _Scalar threshold, float *dist) {
+        Vector3i *traj_points_idx = new Vector3i[Num];
+
+        bool all_safe = true;
+
+        for (int i = 0; i < Num; ++i) {
+            Vector3 traj_point = traj_points[i].template cast<_Scalar>();
+            Vector3 traj_point_m = traj_point.array() - 0.5 * resolution_;
+            distance_buffer_.getIdx(traj_point_m, traj_points_idx[i]);
+
+            if (distance_buffer_.insideVolume(traj_points_idx[i])) {
+                if (distance_buffer_.at(traj_points_idx[i]) < threshold) {
+                    all_safe = false;
+                    break;
+                }
+                dist[i] = distance_buffer_.at(traj_points_idx[i]);
+            } else {
+                all_safe = false;
+                break;
+            }
+        }
+    
+        return all_safe;
+    }
+
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   protected:
