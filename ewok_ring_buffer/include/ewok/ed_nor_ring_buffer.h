@@ -387,7 +387,7 @@ class EuclideanDistanceNormalRingBuffer
 
         // convert ring buffer to point cloud
         Vector3i off;
-        norm_buffer_x_.getOffset(off);
+        setOffset.getOffset(off);
         for(int x = 0; x < _N; x++)
         {
             for(int y = 0; y < _N; y++)
@@ -548,29 +548,64 @@ class EuclideanDistanceNormalRingBuffer
         }
     }
 
+    bool collision_checking(Eigen::Vector3f *traj_points, int Num, _Scalar threshold, float *dist, int &points_num) {
+
+        bool all_safe = true;
+        points_num = 0;
+
+//        Vector3i off;
+//        norm_buffer_x_.getOffset(off);
+
+        for (int i = 0; i < Num; ++i) {
+            Vector3 traj_point = traj_points[i].template cast<_Scalar>();
+            // Vector3i traj_point_idx = (traj_point / resolution_).array().floor().template cast<int>(); //or use distance_buffer_.getIdx
+            Vector3i traj_point_idx;
+            distance_buffer_.getIdx(traj_point, traj_point_idx);
+
+            if (distance_buffer_.insideVolume(traj_point_idx)) {  //if inside
+//                if (!occupancy_buffer_.isFree(traj_point_idx)) {  //if free
+//                    all_safe = false;
+//                    break;
+//                }
+
+                if (distance_buffer_.at(traj_point_idx) < threshold) {
+                    all_safe = false;
+                    break;
+                }
+                dist[i] = distance_buffer_.at(traj_point_idx);
+                ++points_num;
+            } else {
+                all_safe = false;
+                break;
+            }
+        }
+    
+        return all_safe;
+    }
+
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   protected:
     void compute_edt3d()
     {
         Vector3i offset;
-        distance_buffer_.getOffset(offset);
+        distance_buffer_.getOffset(offset); //off_set in distance buffer, integer, sequence of distance ring buffer
 
-        Vector3i min_vec, max_vec;
-        occupancy_buffer_.getUpdatedMinMax(min_vec, max_vec);
+        Vector3i min_vec, max_vec; // To store the max and min index of the points whose distance value is required
+        occupancy_buffer_.getUpdatedMinMax(min_vec, max_vec); // min_vec = off_set in occupancy buffer + (N-1), max_vec = off_set in occupancy buffer
 
-        min_vec -= offset;
-        max_vec -= offset;
+        min_vec -= offset;  // min_vec = off_set in occupancy buffer - off_set in distance buffer + (N-1)
+        max_vec -= offset;  // max_vec = off_set in occupancy buffer - off_set in distance buffer
 
-        min_vec.array() -= truncation_distance_ / resolution_;
-        max_vec.array() += truncation_distance_ / resolution_;
+        min_vec.array() -= truncation_distance_ / resolution_; // 1.0 / 0.2 = 5, truncation_distance_ is set by user, 1.0 in local_planning.cpp
+        max_vec.array() += truncation_distance_ / resolution_; // Shrink the computing area
 
-        min_vec.array() = min_vec.array().max(Vector3i(0, 0, 0).array());
+        min_vec.array() = min_vec.array().max(Vector3i(0, 0, 0).array());  // Set a limit, in case the calculated min_vec is too large
         max_vec.array() = max_vec.array().min(Vector3i(_N - 1, _N - 1, _N - 1).array());
 
         // ROS_INFO_STREAM("min_vec: " << min_vec.transpose() << " max_vec: " << max_vec.transpose());
 
-        for(int x = min_vec[0]; x <= max_vec[0]; x++)
+        for(int x = min_vec[0]; x <= max_vec[0]; x++)  //x, y plane search
         {
             for(int y = min_vec[1]; y <= max_vec[1]; y++)
             {
@@ -578,13 +613,13 @@ class EuclideanDistanceNormalRingBuffer
                     [&](int z) {
                         return occupancy_buffer_.isOccupied(offset + Vector3i(x, y, z)) ?
                                    0 :
-                                   std::numeric_limits<_Scalar>::max();
+                                   std::numeric_limits<_Scalar>::max(); // _Scalar: float
                     },
                     [&](int z, _Scalar val) { tmp_buffer1_.at(Vector3i(x, y, z)) = val; }, min_vec[2], max_vec[2]);
             }
         }
 
-        for(int x = min_vec[0]; x <= max_vec[0]; x++)
+        for(int x = min_vec[0]; x <= max_vec[0]; x++)  // x, z plane search
         {
             for(int z = min_vec[2]; z <= max_vec[2]; z++)
             {
@@ -593,14 +628,14 @@ class EuclideanDistanceNormalRingBuffer
             }
         }
 
-        for(int y = min_vec[1]; y <= max_vec[1]; y++)
+        for(int y = min_vec[1]; y <= max_vec[1]; y++) // y, z plane search
         {
             for(int z = min_vec[2]; z <= max_vec[2]; z++)
             {
                 fill_edt([&](int x) { return tmp_buffer2_.at(Vector3i(x, y, z)); },
                          [&](int x, _Scalar val) {
                              distance_buffer_.at(offset + Vector3i(x, y, z)) =
-                                 std::min(resolution_ * std::sqrt(val), truncation_distance_);
+                                 std::min(resolution_ * std::sqrt(val), truncation_distance_);  // Set final offset
                          },
                          min_vec[0], max_vec[0]);
             }
@@ -610,7 +645,7 @@ class EuclideanDistanceNormalRingBuffer
     }
 
     template <typename F_get_val, typename F_set_val>
-    void fill_edt(F_get_val f_get_val, F_set_val f_set_val, int start = 0, int end = _N - 1)
+    void fill_edt(F_get_val f_get_val, F_set_val f_set_val, int start = 0, int end = _N - 1) // CHG, distance field calculation
     {
         int v[_N];
         _Scalar z[_N + 1];

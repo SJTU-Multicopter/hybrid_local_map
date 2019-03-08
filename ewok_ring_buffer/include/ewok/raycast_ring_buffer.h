@@ -111,10 +111,10 @@ class RaycastRingBuffer {
   }
 
   void insertPointCloudDynamic(const PointCloud &cloud, const Vector3 &origin) {
-      Vector3i origin_idx;
+      Vector3i origin_idx; //world frame
       occupancy_buffer_.getIdx(origin, origin_idx);
 
-      if (!occupancy_buffer_.insideVolume(
+      if (!occupancy_buffer_.insideVolume( //insideVolume will subtract offset and check if the seq is larger than N
               origin_idx)) {
           std::cout <<"Origin outside of volume. Skipping pointcloud.\n";
           return;
@@ -127,7 +127,7 @@ class RaycastRingBuffer {
       for (const Vector4 &vec : cloud) {
           Vector3 v = vec.template head<3>();
           Vector3i idx;
-          occupancy_buffer_.getIdx(v, idx);
+          occupancy_buffer_.getIdx(v, idx); //world frame, cloud should be transformed to world frame first
 
           if (occupancy_buffer_.insideVolume(idx)) {
               flag_buffer_.at(idx) |= occupied_flag; // 0001
@@ -185,7 +185,7 @@ class RaycastRingBuffer {
 
   void insertPointCloud(const PointCloud &cloud, const Vector3 &origin) {
 
-    Vector3i origin_idx;
+    Vector3i origin_idx; //world frame
     occupancy_buffer_.getIdx(origin, origin_idx);
 
     if (!occupancy_buffer_.insideVolume(
@@ -194,18 +194,18 @@ class RaycastRingBuffer {
       return;
     }
 
-    Vector3i min_idx = origin_idx; // 3 channels index
+    Vector3i min_idx = origin_idx; // 3 channels index, (x,y,z) odometry position
     Vector3i max_idx = origin_idx;
 
     // Iterate over all points in pointcloud and mark occupied.
     // If a point is outside the volume - compute closest point in volume
-    // and mark for inserting a free ray
+    // and mark as free point to insert a free ray in the next loop
     for (const Vector4 &vec : cloud) {
-      Vector3 v = vec.template head<3>();
+      Vector3 v = vec.template head<3>(); // Remove rgb, keep x,y,z, world frame
       Vector3i idx;
       occupancy_buffer_.getIdx(v, idx);
 
-      if (occupancy_buffer_.insideVolume(idx)) {
+      if (occupancy_buffer_.insideVolume(idx)) {  //occupancy_buffer_ and flag buffer have the same index
         flag_buffer_.at(idx) |= occupied_flag; // 0001
 
       } else {

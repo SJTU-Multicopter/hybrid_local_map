@@ -40,7 +40,7 @@ class RingBufferBase {
 
   static const int _N = (1 << _POW); // 2 to the power of POW
   static const int _N_2 = _N / 2;
-  static const int _MASK = (_N - 1);
+  static const int _MASK = (_N - 1); //01..111
   static const int _NEG_MASK = ~_MASK;
 
   typedef Eigen::Matrix<_Scalar, 3, 1> Vector3;
@@ -66,7 +66,7 @@ class RingBufferBase {
       offset_ = offset;
   }
 
-  inline void getIdx(const Vector3 & point, Vector3i & idx) const {
+  inline void getIdx(const Vector3 & point, Vector3i & idx) const { //simply divide resolution, will not change frame, could be negative
       idx = (point / resolution_).array().floor().template cast<int>();
   }
 
@@ -138,7 +138,7 @@ class RingBufferBase {
       }
   }
 
-  inline bool insideVolume(const Vector3i &coord) {
+  inline bool insideVolume(const Vector3i &coord) { // a coord in world frame
 
       static const Vector3i
           neg_mask_vec(_NEG_MASK, _NEG_MASK, _NEG_MASK);
@@ -168,13 +168,13 @@ class RingBufferBase {
       Vector3i idx;
 
       for (int i = 0; i < 3; i++) {
-          idx[i] = coord[i] & _MASK;
+          idx[i] = coord[i] & _MASK;  //_MASK = 01...111, remove the symbol bit?
       }
 
       return buffer_[_N * _N * idx[0] + _N * idx[1] + idx[2]];
   }
 
-  inline Vector3i getVolumeCenter() {
+  inline Vector3i getVolumeCenter() {  //transform to world frame center index
       static const Vector3i inc(_N_2, _N_2, _N_2);
       return offset_ + inc;
   }
