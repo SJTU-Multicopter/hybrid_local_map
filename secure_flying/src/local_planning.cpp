@@ -243,9 +243,9 @@ void motion_primitives(Eigen::Vector3d p0, Eigen::Vector3d v0, Eigen::Vector3d a
     // double decay_parameter = 0.5;
     // double T = 0.2;
     
-    double j_limit = 2.5;
-    double a_limit = 1.5;
-    double v_limit = 1.5;
+    double j_limit = 4;
+    double a_limit = 3;
+    double v_limit = 3;
 
     double T1 = fabs(af(0)-a0(0))/j_limit > fabs(af(1)-a0(1))/j_limit ? fabs(af(0)-a0(0))/j_limit : fabs(af(1)-a0(1))/j_limit;
     T1 = T1 > fabs(af(2)-a0(2))/j_limit ? T1 : fabs(af(2)-a0(2))/j_limit;
@@ -345,7 +345,7 @@ void marker_publish(Eigen::MatrixXd &Points)
         p.y = Points(i, 1);
         p.z = Points(i, 2);
 
-        ROS_INFO("p.x %lf", p.x);
+        // ROS_INFO("p.x %lf", p.x);
 
         points.points.push_back(p);
         line_strip.points.push_back(p);
@@ -416,35 +416,17 @@ void trajectoryCallback(const ros::TimerEvent& e) {
             Eigen::VectorXd t;
             motion_primitives(p0, v0, a0, yaw0, cost(seq,1), cost(seq,2), p_goal, cost(seq,3), v_max, pp.delt_t, p, v, a, t);
 
-            // for(int ii=0; ii<p.rows(); ii++)
-            // {
-            //     ROS_INFO("p(ii), %lf, %lf, %lf", p(ii, 0), p(ii, 1), p(ii, 2));
-            // }
-
-            // ROS_INFO("p(ii), %lf, %lf", cost(seq,1), cost(seq,2));
 
             const int Num = p.rows(); // get points number on the path
             Eigen::Vector3f *sim_traj = new Eigen::Vector3f[Num];
 
             for (int i = 0; i < Num; ++i) {
-                sim_traj[i](0) = (float)(p.row(i)(0) - p0(0));
-                sim_traj[i](1) = (float)(p.row(i)(1) - p0(1));
-                sim_traj[i](2) = (float)(p.row(i)(2) - p0(2));
+                sim_traj[i](0) = (float)p.row(i)(0);
+                sim_traj[i](1) = (float)p.row(i)(1);
+                sim_traj[i](2) = (float)p.row(i)(2);
             }
 
-            // for (int i = 0; i < Num; ++i) {
-            //     sim_traj[i](0) = (float)(p.row(i)(0) );
-            //     sim_traj[i](1) = (float)(p.row(i)(1) );
-            //     sim_traj[i](2) = (float)(p.row(i)(2) );
-            // }
-
-            // sim_traj[0](0) = 0.0;
-            // sim_traj[0](1) = 0.0;
-            // sim_traj[0](2) = 0.4;
-        
-            float dist[Num] = {0};
-            int points_num = 0;
-            flag = rrb.collision_checking(sim_traj, Num, 0.2, dist, points_num);
+            flag = rrb.collision_checking(sim_traj, Num, 0.3); // collision_checking
 
             if(flag) 
             {
@@ -466,23 +448,11 @@ void trajectoryCallback(const ros::TimerEvent& e) {
                     marker_publish(show_points);
                 }
 
-                // Show collision checking result
-                ROS_INFO("points number: %d", Num);
-                for (int i = 0; i < points_num; ++i) {
-                    ROS_INFO("distance: %f", dist[i]);
-                }
-
                 break;
             } 
             else 
             {
                 ROS_INFO("traj_unsafe");
-            
-                ROS_INFO("points number: %d", Num);
-                for (int i = 0; i < points_num; ++i) {
-                    ROS_INFO("distance: %f", dist[i]);
-                }
-
             }
         }
 
@@ -587,7 +557,7 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
 
     // State parameters initiate
-    p_goal << 10.0, 0.0, 2.0;
+    p_goal << -100.0, 0.0, 2.0;
     p0 << 0.0, 0.0, 0.0;
     v0 << 0.0, 0.0, 0.0;
     a0 << 0.0, 0.0, 0.0;

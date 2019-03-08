@@ -387,7 +387,7 @@ class EuclideanDistanceNormalRingBuffer
 
         // convert ring buffer to point cloud
         Vector3i off;
-        setOffset.getOffset(off);
+        norm_buffer_x_.getOffset(off);
         for(int x = 0; x < _N; x++)
         {
             for(int y = 0; y < _N; y++)
@@ -548,38 +548,31 @@ class EuclideanDistanceNormalRingBuffer
         }
     }
 
-    bool collision_checking(Eigen::Vector3f *traj_points, int Num, _Scalar threshold, float *dist, int &points_num) {
+    bool collision_checking(Eigen::Vector3f *traj_points, int Num, _Scalar threshold) {
 
         bool all_safe = true;
-        points_num = 0;
-
-//        Vector3i off;
-//        norm_buffer_x_.getOffset(off);
 
         for (int i = 0; i < Num; ++i) {
             Vector3 traj_point = traj_points[i].template cast<_Scalar>();
-            // Vector3i traj_point_idx = (traj_point / resolution_).array().floor().template cast<int>(); //or use distance_buffer_.getIdx
             Vector3i traj_point_idx;
+
             distance_buffer_.getIdx(traj_point, traj_point_idx);
 
-            if (distance_buffer_.insideVolume(traj_point_idx)) {  //if inside
-//                if (!occupancy_buffer_.isFree(traj_point_idx)) {  //if free
-//                    all_safe = false;
-//                    break;
-//                }
+            // std::cout<<"point_ori=("<< traj_point(0) <<","<< traj_point(1)<<","<<traj_point(2) << ")"<<std::endl;
+            // std::cout<<"point_idx=("<< traj_point_idx(0) <<","<< traj_point_idx(1)<<","<<traj_point_idx(2) << ")"<<std::endl;
 
+            if (distance_buffer_.insideVolume(traj_point_idx)) {  //if inside
                 if (distance_buffer_.at(traj_point_idx) < threshold) {
                     all_safe = false;
                     break;
                 }
-                dist[i] = distance_buffer_.at(traj_point_idx);
-                ++points_num;
+                
             } else {
                 all_safe = false;
                 break;
             }
         }
-    
+        // std::cout<<"************************"<<std::endl;
         return all_safe;
     }
 
