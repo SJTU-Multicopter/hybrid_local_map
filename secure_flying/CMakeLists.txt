@@ -10,16 +10,16 @@ find_package(catkin REQUIRED COMPONENTS
   message_filters
 )
 
-find_package(Eigen3 REQUIRED)
+#find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
-find_package(SuiteSparse REQUIRED)
+#find_package(SuiteSparse REQUIRED)
 
 add_definitions(${PCL_DEFINITIONS})
 # catkin_simple()
 catkin_package()
 
 include_directories(${PCL_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS})
-# include_directories(${EIGEN3_INCLUDE_DIR}) #${CHOLMOD_INCLUDE_DIR}#)
+#include_directories(${EIGEN3_INCLUDE_DIR}) #${CHOLMOD_INCLUDE_DIR}#)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/../ewok_ring_buffer/include)
 include_directories(${PROJECT_SOURCE_DIR}/../ewok_optimization/include)

@@ -24,7 +24,7 @@
 #ifndef EWOK_RING_BUFFER_INCLUDE_EWOK_RING_BUFFER_BASE_H_
 #define EWOK_RING_BUFFER_INCLUDE_EWOK_RING_BUFFER_BASE_H_
 
-#include <Eigen/Dense>
+#include "../Eigen/Dense"
 
 #include <visualization_msgs/Marker.h>
 
