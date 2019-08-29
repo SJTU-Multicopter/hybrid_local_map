@@ -29,14 +29,15 @@ include_directories(${PROJECT_SOURCE_DIR}/../ewok_poly_spline/include)
 #target_link_libraries(sim_flying ${PCL_LIBRARIES} ${catkin_LIBRARIES} ${CHOLMOD_LIBRARY} 
 #/usr/local/lib/libnlopt.so.0.9.0)
 
-add_executable(mapping src/mapping.cpp)
-target_link_libraries(mapping ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+#add_executable(mapping src/mapping.cpp)
+#target_link_libraries(mapping ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+#
+#add_executable(simple_mapping src/simple_mapping.cpp)
+#target_link_libraries(simple_mapping ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 
-add_executable(simple_mapping src/simple_mapping.cpp)
-target_link_libraries(simple_mapping ${PCL_LIBRARIES} ${catkin_LIBRARIES})
+#add_executable(local_planning src/local_planning.cpp)
+#target_link_libraries(local_planning ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 
-add_executable(local_planning src/local_planning.cpp)
-target_link_libraries(local_planning ${PCL_LIBRARIES} ${catkin_LIBRARIES})
-
-
+add_executable(local_planning_dynamic src/local_planning_dynamic.cpp)
+target_link_libraries(local_planning_dynamic ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 
