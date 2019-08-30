@@ -28,7 +28,7 @@
 #include <string>
 #include <fstream>
 #include <cmath>
-#include <Eigen/Eigen>
+#include <../include/Eigen/Eigen>
 #include <algorithm>
 
 using namespace message_filters;

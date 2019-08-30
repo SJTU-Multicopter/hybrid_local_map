@@ -10,7 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
     message_filters
 )
 # find_package(catkin_simple REQUIRED)
-find_package(Eigen3 REQUIRED)
+# find_package(Eigen3 REQUIRED)
 # find_package(octomap REQUIRED)
 find_package(PCL REQUIRED)
 
@@ -18,7 +18,7 @@ add_definitions(${PCL_DEFINITIONS})
 catkin_package()
 
 include_directories(${PCL_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS})
-include_directories(${EIGEN3_INCLUDE_DIR}) 
+include_directories(${PROJECT_SOURCE_DIR}/../include_files) 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 # ${OCTOMAP_INCLUDE_DIRS})
 # link_directories(${PCL_LIBRARY_DIRS})

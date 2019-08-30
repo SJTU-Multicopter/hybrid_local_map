@@ -12,6 +12,8 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/PointStamped.h>
+#include <geometry_msgs/TwistStamped.h>
+
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/Imu.h>
@@ -26,10 +28,9 @@
 #include <string>
 #include <fstream>
 #include <cmath>
-#include <Eigen/Eigen>
+#include <../include/Eigen/Eigen>
 #include <algorithm>
 
-#include <mavros_msgs/RCIn.h> // Remote control msgs
 #include <px4_autonomy/Position.h> // Publish control points to node 'px4_autonomy'
 
 using namespace message_filters;
@@ -60,14 +61,13 @@ ros::Publisher p_goal_pose_pub;
 double x_centre, y_centre, z_centre;
 
 bool objects_updated = false;
-bool odom_initilized = false;
 bool imu_initilized = false;
 bool state_locked = false;
 bool state_updating = false;
 bool in_safety_mode = true;
 
 /****** Parameters for path planning ******/
-const int ANGLE_H_NUM = 13;
+const int ANGLE_H_NUM = 24;
 const int ANGLE_V_NUM = 7;
 Eigen::VectorXd Fov_half(2); //Fov parameters
 Eigen::VectorXd Angle_h(ANGLE_H_NUM);  // initiate later in the main function
@@ -78,7 +78,9 @@ Eigen::Vector3d p_goal;
 Eigen::Vector3d p0;
 Eigen::Vector3d v0;
 Eigen::Vector3d a0;
-double yaw0 = 0.0;
+Eigen::VectorXd quad(4); 
+
+double yaw0 = 0.0;  //Keep zero in this edition, the sampled directions are from all sides
 double theta_h_last = 0.0;
 double theta_v_last = 0.0;
 
@@ -109,13 +111,13 @@ double flight_altitude = 1.5;
 /**************************************************/
 
 // this callback use input cloud to update ring buffer, and update odometry of UAV
-void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs::PointCloud2ConstPtr& cloud)
+void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
     ROS_INFO("Received Point Cloud!");
     _data_input_time = ros::Time::now();
 
-    tf::Quaternion q1(odom->pose.pose.orientation.x, odom->pose.pose.orientation.y,
-                      odom->pose.pose.orientation.z, odom->pose.pose.orientation.w);
+    tf::Quaternion q1(quad(0), quad(1), quad(2), quad(3));
+
     tf::Matrix3x3 m(q1);
     double roll, pitch, yaw;
     m.getRPY(roll, pitch, yaw);
@@ -131,17 +133,18 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
     // transform from uav to world
     // get orientation and translation
     Eigen::Quaternionf q;
-    q.w() = odom->pose.pose.orientation.w;
-    q.x() = odom->pose.pose.orientation.x;
-    q.y() = odom->pose.pose.orientation.y;
-    q.z() = odom->pose.pose.orientation.z;
+    
+    q.x() = quad(0);
+    q.y() = quad(1);
+    q.z() = quad(2);
+    q.w() = quad(3);
 
     // create transform matrix
     Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
     transform.block(0, 0, 3, 3) = Eigen::Matrix3f(q);
-    transform(0, 3) = odom->pose.pose.position.x;
-    transform(1, 3) = odom->pose.pose.position.y;
-    transform(2, 3) = odom->pose.pose.position.z;
+    transform(0, 3) = p0(0);
+    transform(1, 3) = p0(1);
+    transform(2, 3) = p0(2);
     // std::cout << transform.matrix() << "\n\n";
 
     // convert cloud to pcl form
@@ -167,14 +170,14 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
     sor.filter(*cloud_filtered);
 
     // compute ewol pointcloud and origin
-    Eigen::Vector3f origin = (transform * Eigen::Vector4f(0, 0, 0, 1)).head<3>(); // odom position (x,y,z)
+    Eigen::Vector3f origin = (transform * Eigen::Vector4f(0, 0, 0, 1)).head<3>(); //  position (x,y,z)
     ewok::EuclideanDistanceNormalRingBuffer<POW>::PointCloud cloud_ew;
     std::vector<pcl::PointXYZRGB, Eigen::aligned_allocator<pcl::PointXYZRGB> > points =
             cloud_filtered->points; //  cloud_2->points;
 
-    x_centre = odom->pose.pose.position.x;
-    y_centre = odom->pose.pose.position.y;
-    z_centre = odom->pose.pose.position.z;
+    x_centre =  p0(0);
+    y_centre =  p0(1);
+    z_centre =  p0(2);
 
     for(int i = 0; i < points.size(); ++i)
     {
@@ -194,6 +197,7 @@ void odomCloudCallback(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs
         rrb.getIdx(origin, idx);
         rrb.setOffset(idx);
         initialized = true;
+        ROS_WARN("Initialized!!");
     }
     else
     {
@@ -239,6 +243,7 @@ void timerCallback(const ros::TimerEvent& e)
     cloud2.header.stamp = ros::Time::now();
     cloud2.header.frame_id = "world";
     cloud2_pub.publish(cloud2);
+    ROS_INFO("Cloud published!");
 
     //publish center
     geometry_msgs::PointStamped center_p;
@@ -493,16 +498,12 @@ void trajectoryCallback(const ros::TimerEvent& e) {
             }
             else
             {
-                ROS_INFO("traj_unsafe");
+                // ROS_INFO("traj_unsafe");
             }
         }
 
         if(!flag){
             ROS_WARN("No valid trajectory found!");
-
-            ROS_WARN("No traj!");
-            ROS_WARN("No traj!");
-
             ROS_WARN("Trapped in safety mode!");
             in_safety_mode = true;
 
@@ -514,8 +515,6 @@ void trajectoryCallback(const ros::TimerEvent& e) {
             traj_pt.y = p_store(1);
             traj_pt.z = p_store(2);
             traj_pt.yaw = yaw_store;
-            traj_pt.pitch = 0.0;  // tentative
-            traj_pt.roll = 0.0;  // tentative
 
             for (int i = 0; i < 3; ++i) {
                 traj_pt.header.stamp = ros::Time::now();
@@ -543,72 +542,65 @@ void trajectoryCallback(const ros::TimerEvent& e) {
 
 }
 
-/*void stateCallBack(const nav_msgs::OdometryConstPtr& odom, const sensor_msgs::ImuConstPtr& imu)
-{
-    ROS_INFO("State data!");
-    Eigen::Vector3d p_goal;
-    p_goal << 10, 0, 2;
-    Eigen::Vector3d p0;
-    p0 << odom->pose.pose.position.x, odom->pose.pose.position.y, odom->pose.pose.position.z;
-    Eigen::Vector3d v0;
-    v0 << odom->twist.twist.linear.x, odom->twist.twist.linear.y, odom->twist.twist.linear.z;
-    Eigen::Vector3d a0;
-    a0 << imu->linear_acceleration.x, imu->linear_acceleration.y, imu->linear_acceleration.z;
 
-    double x = imu->orientation.x;
-    double y = imu->orientation.y;
-    double z = imu->orientation.z;
-    double w = imu->orientation.w;
-    double yaw0 = atan2(2 * (x*y + w*z), w*w + x*x - y*y - z*z);
-    // ROS_WARN("yaw0 is: %lf", yaw0);
-
-    trajectoryCallback(p_goal, p0, v0, a0, yaw0);
-}*/
-
-void odomCallback(const nav_msgs::OdometryConstPtr& odom)
+void positionCallback(const geometry_msgs::PoseStamped& msg)
 {
     if(!state_locked)
     {
         state_updating = true;
 
-        p0(0) = odom->pose.pose.position.x;
-        p0(1) = odom->pose.pose.position.y;
-        p0(2) = odom->pose.pose.position.z;
+        p0(0) = msg.pose.position.x;
+        p0(1) = msg.pose.position.y;
+        p0(2) = msg.pose.position.z;
 
-        v0(0) = odom->twist.twist.linear.x;
-        v0(1) = odom->twist.twist.linear.y;
-        v0(2) = odom->twist.twist.linear.z;
+        quad(0) = msg.pose.orientation.x;
+        quad(1) = msg.pose.orientation.y;
+        quad(2) = msg.pose.orientation.z;
+        quad(3) = msg.pose.orientation.w;
 
         if (!in_safety_mode) {
             p_store = p0;
             yaw_store = yaw0;
         }
-
         state_updating = false;
     }
-    odom_initilized = true;
 }
 
-void imuCallback(const sensor_msgs::ImuConstPtr& imu)
+
+void velocityCallback(const geometry_msgs::TwistStamped& msg)
 {
     if(!state_locked)
     {
         state_updating = true;
 
-        a0(0) = imu->linear_acceleration.x;
-        a0(1) = imu->linear_acceleration.y;
-        a0(2) = imu->linear_acceleration.z - GRAVATY;
-
-        double x = imu->orientation.x;
-        double y = imu->orientation.y;
-        double z = imu->orientation.z;
-        double w = imu->orientation.w;
-        yaw0 = atan2(2 * (x*y + w*z), w*w + x*x - y*y - z*z);
+        v0(0) = msg.twist.linear.x;
+        v0(1) = msg.twist.linear.y;
+        v0(2) = msg.twist.linear.z;
 
         state_updating = false;
     }
-    imu_initilized = true;
 }
+
+// void imuCallback(const sensor_msgs::ImuConstPtr& imu)
+// {
+//     if(!state_locked)
+//     {
+//         state_updating = true;
+
+//         a0(0) = imu->linear_acceleration.x;
+//         a0(1) = imu->linear_acceleration.y;
+//         a0(2) = imu->linear_acceleration.z - GRAVATY;
+
+//         double x = imu->orientation.x;
+//         double y = imu->orientation.y;
+//         double z = imu->orientation.z;
+//         double w = imu->orientation.w;
+//         yaw0 = atan2(2 * (x*y + w*z), w*w + x*x - y*y - z*z);
+
+//         state_updating = false;
+//     }
+//     imu_initilized = true;
+// }
 
 // Set p_goal according to radio control and publish it
 //void pGoalCallback(const mavros_msgs::RCIn& msg)
@@ -708,32 +700,35 @@ int main(int argc, char** argv)
     p0 << 0.0, 0.0, 0.0;
     v0 << 0.0, 0.0, 0.0;
     a0 << 0.0, 0.0, 0.0;
+    quad << 0.0, 0.0, 0.0, 1.0;
 
     // Fov sample parameters
     Fov_half << 35, 20;
     // Horizontal angles larger than 90 degree are deleted
-    Angle_h << -90, -70, -50, -30, -20, -10, 0, 10, 20, 30, 50, 70, 90;
+    //Angle_h << -90, -70, -50, -30, -20, -10, 0, 10, 20, 30, 50, 70, 90;
+    Angle_h << -165, -150, -135, -120, -105, -90, -75, -60, -45, -30, -15, 0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180;
     Angle_v << -40, -20, -10, 0, 10, 20, 40;
 
     Angle_h = Angle_h * M_PI / 180.0;
     Angle_v = Angle_v * M_PI / 180.0;
     Fov_half = Fov_half * M_PI / 180.0;
 
-    F_cost = Eigen::MatrixXd::Zero(ANGLE_H_NUM, ANGLE_V_NUM);
-    for(int i = 0; i < ANGLE_H_NUM; i++)
-    {
-        for(int j = 0; j < ANGLE_V_NUM; j++)
-        {
-            if(fabs(Angle_h(i)) < Fov_half(0) && fabs(Angle_v(j)) < Fov_half(1)) {
-                continue;
-            } else
-            {
-                double delt_h_angle = std::min(fabs(Angle_h(i)-Fov_half(0)), fabs(Angle_h(i)+Fov_half(0)));
-                double delt_v_angle = std::min(fabs(Angle_v(j)-Fov_half(1)), fabs(Angle_v(j)+Fov_half(1)));
-                F_cost(i,j) = (pp.kk_h*delt_h_angle + pp.kk_v*delt_v_angle)/(270/180*M_PI); // % vertical max error + horizontal max error = 270¡ã
-            }
-        }
-    }
+    // Let F_cost == 0 here, so that the planning radius on each direction is fixed. (d_ref)
+    F_cost = Eigen::MatrixXd::Zero(ANGLE_H_NUM, ANGLE_V_NUM);  
+    // for(int i = 0; i < ANGLE_H_NUM; i++)
+    // {
+    //     for(int j = 0; j < ANGLE_V_NUM; j++)
+    //     {
+    //         if(fabs(Angle_h(i)) < Fov_half(0) && fabs(Angle_v(j)) < Fov_half(1)) {
+    //             continue;
+    //         } else
+    //         {
+    //             double delt_h_angle = std::min(fabs(Angle_h(i)-Fov_half(0)), fabs(Angle_h(i)+Fov_half(0)));
+    //             double delt_v_angle = std::min(fabs(Angle_v(j)-Fov_half(1)), fabs(Angle_v(j)+Fov_half(1)));
+    //             F_cost(i,j) = (pp.kk_h*delt_h_angle + pp.kk_v*delt_v_angle)/(270/180*M_PI); // % vertical max error + horizontal max error = 270¡ã
+    //         }
+    //     }
+    // }
 
     // ringbuffer cloud2
     cloud2_pub = nh.advertise<sensor_msgs::PointCloud2>("/ring_buffer/cloud_ob", 1, true);
@@ -744,20 +739,13 @@ int main(int argc, char** argv)
 
     p_goal_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/p_goal_pose", 1, true);
 
-    ros::Subscriber odom_isolate_sub =  nh.subscribe("/zed/odom", 1, odomCallback);
-    ros::Subscriber imu_sub =  nh.subscribe("/zed/imu/data", 1, imuCallback);
+    ros::Subscriber position_isolate_sub =  nh.subscribe("/mavros/local_position/pose", 1, positionCallback);
+    ros::Subscriber velocity_isolate_sub = nh.subscribe("/mavros/local_position/velocity", 1, velocityCallback);
+    // ros::Subscriber imu_sub =  nh.subscribe("/zed/imu/data", 1, imuCallback);  //Let a0 == 0 always. measurement is not precise
+
+    ros::Subscriber cloud_sub = nh.subscribe("/camera/depth/color/points", 1, cloudCallback);
 
 //    ros::Subscriber p_goal_sub = nh.subscribe("/mavros/rc/in", 1, pGoalCallback);
-
-    message_filters::Subscriber<nav_msgs::Odometry> odom_sub(nh, "/zed/odom", 2);
-    message_filters::Subscriber<sensor_msgs::PointCloud2> pcl_sub(nh, "/zed/point_cloud/cloud_registered", 1);
-    // message_filters::Subscriber<sensor_msgs::Imu> imu_sub(nh, "/firefly/ground_truth/imu", 2);
-
-    TimeSynchronizer<nav_msgs::Odometry, sensor_msgs::PointCloud2> sync(odom_sub, pcl_sub, 10);
-    sync.registerCallback(boost::bind(&odomCloudCallback, _1, _2));
-
-    // TimeSynchronizer<nav_msgs::Odometry, sensor_msgs::Imu> sync2(odom_sub, imu_sub, 10);
-    // sync2.registerCallback(boost::bind(&stateCallBack, _1, _2));
 
     // timer for publish ringbuffer as pointcloud
     ros::Timer timer1 = nh.createTimer(ros::Duration(0.2), timerCallback); // RATE 5 Hz to publish
@@ -768,7 +756,7 @@ int main(int argc, char** argv)
     std::cout << "Start mapping!" << std::endl;
 
     // ros::spin();
-    ros::AsyncSpinner spinner(4); // Use 4 threads
+    ros::AsyncSpinner spinner(2); // Use 2 threads
     spinner.start();
     ros::waitForShutdown();
 
