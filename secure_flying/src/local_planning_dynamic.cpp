@@ -55,11 +55,9 @@ const float cal_duration = 0.05;
 ewok::EuclideanDistanceNormalRingBuffer<POW> rrb(resolution, 1.0);
 
 ros::Publisher current_marker_pub;
-ros::Publisher cloud2_pub, center_pub;
+ros::Publisher cloud2_pub, cloud_edf_pub, center_pub;
 
 ros::Publisher traj_point_pub; // add on 9 Mar
-ros::Publisher vis_cloud_env_pub, vis_cloud_dis_field_pub;
-ros::Publisher p_goal_pose_pub;
 
 double x_centre, y_centre, z_centre;
 
@@ -70,12 +68,11 @@ bool state_updating = false;
 bool in_safety_mode = true;
 
 /****** Parameters for path planning ******/
-const int ANGLE_H_NUM = 24;
+const int ANGLE_H_NUM = 17;
 const int ANGLE_V_NUM = 7;
 Eigen::VectorXd Fov_half(2); //Fov parameters
 Eigen::VectorXd Angle_h(ANGLE_H_NUM);  // initiate later in the main function
 Eigen::VectorXd Angle_v(ANGLE_V_NUM); // initiate later in the main function
-Eigen::MatrixXd F_cost;
 
 Eigen::Vector3d p_goal;
 Eigen::Vector3d p0;
@@ -90,7 +87,6 @@ double theta_v_last = 0.0;
 
 Eigen::Vector3d p_store;
 double yaw_store = 0.0;
-double rc_theta = 0.0;
 
 struct  Path_Planning_Parameters
 {
@@ -99,9 +95,6 @@ struct  Path_Planning_Parameters
     double k1_z = 2; //% Goal directed coefficient
     double k2_xy = 4; //% Rotation coefficient
     double k2_z = 4; //% Rotation coefficient
-    double k3 = M_PI*0.1; //% FOV coefficient
-    double kk_h = 1; //% FOV horisontal cost coefficient
-    double kk_v = 1; //% FOV vertical cost coefficient
     double v_max_ori = 1.0; //% m/s, just reference  5.0 originally
     double v_scale_min = 0.1;
     double delt_t = 0.05; //%time interval between two control points
@@ -177,8 +170,7 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
     // compute ewol pointcloud and origin
     Eigen::Vector3f origin = (transform * Eigen::Vector4f(0, 0, 0, 1)).head<3>(); //  position (x,y,z)
     ewok::EuclideanDistanceNormalRingBuffer<POW>::PointCloud cloud_ew;
-    std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ> > points =
-            cloud_2->points; //  cloud_2->points;
+    std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ> > points = cloud_2->points; //  cloud_2->points;
 
     x_centre =  p0(0);
     y_centre =  p0(1);
@@ -264,6 +256,48 @@ void timerCallback(const ros::TimerEvent& e)
     center_p.point.y = center(1);
     center_p.point.z = center(2);
     center_pub.publish(center_p);
+
+    /*EDF showing*/
+     // Since the pointcloud which is too close to the drone is invalid, skip 1.0m
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_edf_field(new pcl::PointCloud<pcl::PointXYZRGB>());
+    double trunc_distance = 1.0; // Truncation distance is 1.0
+    double boundary = pow(2.0, POW) * resolution / 2; // Here the boundary is 6.4m
+
+    for (double vis_x = resolution/2; vis_x < boundary; vis_x += resolution) {
+        for (double vis_y = resolution/2; vis_y < boundary; vis_y += resolution) { //遍历整个空间填充distance颜色
+            // Skip the truncation area
+            if (vis_x <= trunc_distance && vis_y <= trunc_distance) {
+                continue;
+            }
+
+            pcl::PointXYZRGB vis_point;
+            int dir_x[4] = {1, 1, -1, -1};
+            int dir_y[4] = {1, -1, 1, -1};
+
+            for (int i = 0; i < 4; ++i) {
+                vis_point.x = x_centre + vis_x * dir_x[i];
+                vis_point.y = y_centre + vis_y * dir_y[i];
+                vis_point.z = z_centre;
+  
+                Eigen::Vector3i point_RGB = rrb.get_rgb_edf_dynamic(vis_point.x,
+                     vis_point.y, vis_point.z);
+
+                vis_point.r = point_RGB(0);
+                vis_point.g = point_RGB(1);
+                vis_point.b = point_RGB(2);
+
+                cloud_edf_field->points.push_back(vis_point);
+            }
+        }
+    }
+    // Publish edf as point cloud 
+    sensor_msgs::PointCloud2 edf_ros_cloud;
+    pcl::toROSMsg(*cloud_edf_field, edf_ros_cloud);
+    edf_ros_cloud.header.stamp = ros::Time::now();
+    edf_ros_cloud.header.frame_id = "world";
+    cloud_edf_pub.publish(edf_ros_cloud);
+
 }
 
 void motion_primitives(Eigen::Vector3d p0, Eigen::Vector3d v0, Eigen::Vector3d a0, double yaw0, double theta_h,
@@ -303,23 +337,6 @@ void motion_primitives(Eigen::Vector3d p0, Eigen::Vector3d v0, Eigen::Vector3d a
     T = T < 0.5 ? 0.5 : T;
 
     int times = T / delt_t;
-
-
-    // Show
-    // for(int i=0; i<3; i++)
-    // {
-    //     ROS_INFO("P0, %lf, %lf, %lf", p0(0), p0(1), p0(2));
-    //     ROS_INFO("V0, %lf, %lf, %lf", v0(0), v0(1), v0(2));
-    //     ROS_INFO("A0, %lf, %lf, %lf", a0(0), a0(1), a0(2));
-
-    //     ROS_INFO("Pf, %lf, %lf, %lf", pf(0), pf(1), pf(2));
-    //     ROS_INFO("Vf, %lf, %lf, %lf", vf(0), vf(1), vf(2));
-    //     ROS_INFO("Af, %lf, %lf, %lf", af(0), af(1), af(2));
-
-    //     ROS_INFO("T, %lf, yaw0, %lf, v_max, %lf, d, %lf", T, yaw0, v_max, d);
-    // }
-
-
 
     p = Eigen::MatrixXd::Zero(times, 3);
     v = Eigen::MatrixXd::Zero(times, 3);
@@ -404,14 +421,12 @@ void trajectoryCallback(const ros::TimerEvent& e) {
     if(!state_updating)
     {
         // To do: Update p_goal in accordance with keyboard/joy command
-
         state_locked = true;
 
         // TODO: Safety strategy for emergency stop should be added here
 
         // geometry_msgs::Point traj_pt;
         px4_autonomy::Position traj_pt;
-
 
         /** Moition primitives **/
         Eigen::Vector3d delt_p = p_goal - p0;
@@ -427,18 +442,18 @@ void trajectoryCallback(const ros::TimerEvent& e) {
         {
             for(int j=0; j<ANGLE_V_NUM; j++)
             {
-                theta_h = Angle_h(i);
-                theta_v = Angle_v(j);
+                theta_h = Angle_h(i) + phi_h;  //start from goal position, chg, 2019.8.31
+                theta_v = Angle_v(j) + phi_v;  //start from goal position, chg, 2019.8.31
                 int m = i*ANGLE_V_NUM + j; //sequence number
                 // Vectorial angle can never be larger than PI
-                double goal_diff = fabs(yaw0+theta_h-phi_h) > M_PI ? 2*M_PI - fabs(yaw0+theta_h-phi_h) : yaw0+theta_h-phi_h;
+                double goal_diff_h = fabs(theta_h-phi_h) > M_PI ? 2*M_PI - fabs(theta_h-phi_h) : theta_h-phi_h;
+                double goal_diff_v = fabs(theta_v-phi_v) > M_PI ? 2*M_PI - fabs(theta_v-phi_v) : theta_v-phi_v;
 
-                cost(m, 0) = pp.k1_xy*goal_diff*goal_diff + pp.k1_z*(theta_v-phi_v)*(theta_v-phi_v) +
-                             pp.k2_xy*(theta_h-theta_h_last)*(theta_h-theta_h_last) + pp.k2_z*(theta_v-theta_v_last)*(theta_v-theta_v_last) +
-                             pp.k3*F_cost(i,j);
+                cost(m, 0) = pp.k1_xy*goal_diff_h*goal_diff_h + pp.k1_z*goal_diff_v*goal_diff_v +
+                        pp.k2_xy*(theta_h-theta_h_last)*(theta_h-theta_h_last) + pp.k2_z*(theta_v-theta_v_last)*(theta_v-theta_v_last);
                 cost(m, 1) = theta_h;
                 cost(m, 2) = theta_v;
-                cost(m, 3) = (1-F_cost(i,j)) * pp.d_ref;
+                cost(m, 3) = pp.d_ref;
             }
         }
 
@@ -484,7 +499,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
             }
 
             // Obstacle threshold is 0.9 now
-            flag = rrb.collision_checking(sim_traj, Num, 0.9); // collision_checking
+            flag = rrb.collision_checking(sim_traj, Num, 0.3); // collision_checking
 
             if(flag)
             {
@@ -515,8 +530,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
         }
 
         if(!flag){
-            ROS_WARN("No valid trajectory found!");
-            ROS_WARN("Trapped in safety mode!");
+            ROS_WARN("No valid trajectory found! Trapped in safety mode!");
             in_safety_mode = true;
 
             //emergency stop?      4th July
@@ -611,114 +625,6 @@ void motorCallback(const geometry_msgs::Point32& msg)
     }
 }
 
-// void imuCallback(const sensor_msgs::ImuConstPtr& imu)
-// {
-//     if(!state_locked)
-//     {
-//         state_updating = true;
-
-//         a0(0) = imu->linear_acceleration.x;
-//         a0(1) = imu->linear_acceleration.y;
-//         a0(2) = imu->linear_acceleration.z - GRAVATY;
-
-//         double x = imu->orientation.x;
-//         double y = imu->orientation.y;
-//         double z = imu->orientation.z;
-//         double w = imu->orientation.w;
-//         yaw0 = atan2(2 * (x*y + w*z), w*w + x*x - y*y - z*z);
-
-//         state_updating = false;
-//     }
-//     imu_initilized = true;
-// }
-
-// Set p_goal according to radio control and publish it
-//void pGoalCallback(const mavros_msgs::RCIn& msg)
-//{
-//    // The mean value is 1514 and amplitude is 420
-//    const int neutral_value = 1514;
-//    const int max_diff = 420;
-//    ROS_INFO("channel 8 %d", msg.channels[7]);
-//    rc_theta = (msg.channels[7] - neutral_value) / (double)max_diff * M_PI; //+ yaw0;
-//    ROS_INFO("theta %lf", rc_theta/M_PI*180.0);
-//
-//    // Visualization of p_goal
-//    geometry_msgs::Quaternion p_goal_quat = tf::createQuaternionMsgFromYaw(rc_theta);
-//
-//    geometry_msgs::PoseStamped p_goal_pose;
-//    p_goal_pose.header.stamp = ros::Time::now();
-//    p_goal_pose.header.frame_id = "world";
-//    p_goal_pose.pose.position.x = p0(0);
-//    p_goal_pose.pose.position.y = p0(1);
-//    p_goal_pose.pose.position.z = p0(2);
-//    p_goal_pose.pose.orientation = p_goal_quat;
-//
-//    p_goal_pose_pub.publish(p_goal_pose);
-//
-//    if (!state_locked) {
-//        p_goal(0) = x_centre + p_goal_radius * cos(rc_theta);
-//        p_goal(1) = y_centre + p_goal_radius * sin(rc_theta);
-//        p_goal(2) = flight_altitude;
-//    }
-//
-//    // Upper position of channel 7 is planning mode(1094), middle positon is pause mode(1514),
-//    // lower positon is recover trigger(1934)
-//    uav_pause = msg.channels[6] > 1200;
-//
-//    // Recover mode triggered
-//    if (msg.channels[6] > 1800) {
-//        // If the drone is not in safety mode, there is no need to recover
-//        if (!in_safety_mode) {
-//            ROS_WARN("No need to recover!");
-//            return;
-//        }
-//
-//        safety_mode_recover = true;
-//
-//        // Resetting flight altitude
-//        px4_autonomy::Position traj_pt;
-//
-//        // Considering that the drone pilot may change the positon of uav after
-//        // it has got trapped in safety mode, the drone ought to stay still at the exact place
-//        // where it currently stays
-//        p_store(0) = p0(0);
-//        p_store(1) = p0(1);
-//        p_store(2) = flight_altitude;
-//        yaw_store = yaw0;
-//
-//        traj_pt.x = p_store(0);
-//        traj_pt.y = p_store(1);
-//        traj_pt.z = p_store(2);
-//        traj_pt.yaw = yaw_store;
-//        traj_pt.pitch = 0.0;  // tentative
-//        traj_pt.roll = 0.0;  // tentative
-//
-//        for (int i = 0; i < 3; ++i) {
-//            traj_pt.header.stamp = ros::Time::now();
-//            traj_point_pub.publish(traj_pt);
-//        }
-//
-//        rc_theta = yaw0;
-//        ROS_INFO("rc_theta: %lf", rc_theta / M_PI * 180.0);
-//
-//        // Resetting p_goal and visualize it
-//        p_goal(0) = x_centre + p_goal_radius * cos(rc_theta);
-//        p_goal(1) = y_centre + p_goal_radius * sin(rc_theta);
-//        p_goal(2) = flight_altitude;
-//
-//        p_goal_quat = tf::createQuaternionMsgFromYaw(rc_theta);
-//
-//        p_goal_pose.header.stamp = ros::Time::now();
-//        p_goal_pose.header.frame_id = "world";
-//        p_goal_pose.pose.position.x = p0(0);
-//        p_goal_pose.pose.position.y = p0(1);
-//        p_goal_pose.pose.position.z = p0(2);
-//        p_goal_pose.pose.orientation = p_goal_quat;
-//
-//        p_goal_pose_pub.publish(p_goal_pose);
-//    }
-//}
-
 
 int main(int argc, char** argv)
 {
@@ -726,7 +632,7 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
 
     // State parameters initiate
-    p_goal << 100.0, 0.0, 1.5;
+    p_goal << 0.0, 20.0, 1.5;
     p0 << 0.0, 0.0, 0.0;
     v0 << 0.0, 0.0, 0.0;
     a0 << 0.0, 0.0, 0.0;
@@ -734,38 +640,21 @@ int main(int argc, char** argv)
     Fov_half << 35, 20;
     // Horizontal angles larger than 90 degree are deleted
     //Angle_h << -90, -70, -50, -30, -20, -10, 0, 10, 20, 30, 50, 70, 90;
-    Angle_h << -165, -150, -135, -120, -105, -90, -75, -60, -45, -30, -15, 0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180;
+    Angle_h << -90, -75, -60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 75, 90;
     Angle_v << -40, -20, -10, 0, 10, 20, 40;
 
     Angle_h = Angle_h * M_PI / 180.0;
     Angle_v = Angle_v * M_PI / 180.0;
     Fov_half = Fov_half * M_PI / 180.0;
 
-    // Let F_cost == 0 here, so that the planning radius on each direction is fixed. (d_ref)
-    F_cost = Eigen::MatrixXd::Zero(ANGLE_H_NUM, ANGLE_V_NUM);  
-    // for(int i = 0; i < ANGLE_H_NUM; i++)
-    // {
-    //     for(int j = 0; j < ANGLE_V_NUM; j++)
-    //     {
-    //         if(fabs(Angle_h(i)) < Fov_half(0) && fabs(Angle_v(j)) < Fov_half(1)) {
-    //             continue;
-    //         } else
-    //         {
-    //             double delt_h_angle = std::min(fabs(Angle_h(i)-Fov_half(0)), fabs(Angle_h(i)+Fov_half(0)));
-    //             double delt_v_angle = std::min(fabs(Angle_v(j)-Fov_half(1)), fabs(Angle_v(j)+Fov_half(1)));
-    //             F_cost(i,j) = (pp.kk_h*delt_h_angle + pp.kk_v*delt_v_angle)/(270/180*M_PI); // % vertical max error + horizontal max error = 270¡ã
-    //         }
-    //     }
-    // }
-
     // ringbuffer cloud2
     cloud2_pub = nh.advertise<sensor_msgs::PointCloud2>("/ring_buffer/cloud_ob", 1, true);
+    cloud_edf_pub = nh.advertise<sensor_msgs::PointCloud2>("/ring_buffer/edf", 1, true);
+
     center_pub = nh.advertise<geometry_msgs::PointStamped>("/ring_buffer/center",1,true) ;
     current_marker_pub = nh.advertise<visualization_msgs::Marker>("/visualization_marker", 1);
 
     traj_point_pub = nh.advertise<px4_autonomy::Position>("/px4/cmd_pose", 5, true); // add on 9 Mar
-
-    p_goal_pose_pub = nh.advertise<geometry_msgs::PoseStamped>("/p_goal_pose", 1, true);
 
     ros::Subscriber position_isolate_sub =  nh.subscribe("/mavros/local_position/pose", 1, positionCallback);
     ros::Subscriber velocity_isolate_sub = nh.subscribe("/mavros/local_position/velocity", 1, velocityCallback);

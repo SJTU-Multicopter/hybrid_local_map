@@ -461,13 +461,14 @@ void trajectoryCallback(const ros::TimerEvent& e) {
         {
             for(int j=0; j<ANGLE_V_NUM; j++)
             {
-                theta_h = Angle_h(i);
-                theta_v = Angle_v(j);
+                theta_h = Angle_h(i) + phi_h;  //start from goal position, chg, 2019.8.31
+                theta_v = Angle_v(j) + phi_v;  //start from goal position, chg, 2019.8.31
                 int m = i*ANGLE_V_NUM + j; //sequence number
                 // Vectorial angle can never be larger than PI
-                double goal_diff = fabs(yaw0+theta_h-phi_h) > M_PI ? 2*M_PI - fabs(yaw0+theta_h-phi_h) : yaw0+theta_h-phi_h;
+                double goal_diff_h = fabs(theta_h-phi_h) > M_PI ? 2*M_PI - fabs(theta_h-phi_h) : theta_h-phi_h;
+                double goal_diff_v = fabs(theta_v-phi_v) > M_PI ? 2*M_PI - fabs(theta_v-phi_v) : theta_v-phi_v;
 
-                cost(m, 0) = pp.k1_xy*goal_diff*goal_diff + pp.k1_z*(theta_v-phi_v)*(theta_v-phi_v) +
+                cost(m, 0) = pp.k1_xy*goal_diff_h*goal_diff_h + pp.k1_z*goal_diff_v*goal_diff_v +
                         pp.k2_xy*(theta_h-theta_h_last)*(theta_h-theta_h_last) + pp.k2_z*(theta_v-theta_v_last)*(theta_v-theta_v_last) +
                         pp.k3*F_cost(i,j);
                 cost(m, 1) = theta_h;
@@ -750,93 +751,6 @@ void imuCallback(const sensor_msgs::ImuConstPtr& imu)
     imu_initilized = true;
 }
 
-// Set p_goal according to radio control and publish it
-void pGoalCallback(const mavros_msgs::RCIn& msg)
-{
-    // The mean value is 1514 and amplitude is 420
-    const int neutral_value = 1514;
-    const int max_diff = 420;
-    ROS_INFO("channel 8 %d", msg.channels[7]);
-    rc_theta = (msg.channels[7] - neutral_value) / (double)max_diff * M_PI; //+ yaw0;
-    ROS_INFO("theta %lf", rc_theta/M_PI*180.0);
-
-    // Visualization of p_goal
-    geometry_msgs::Quaternion p_goal_quat = tf::createQuaternionMsgFromYaw(rc_theta);
-    
-    geometry_msgs::PoseStamped p_goal_pose;
-    p_goal_pose.header.stamp = ros::Time::now();
-    p_goal_pose.header.frame_id = "world";
-    p_goal_pose.pose.position.x = p0(0);
-    p_goal_pose.pose.position.y = p0(1);
-    p_goal_pose.pose.position.z = p0(2);
-    p_goal_pose.pose.orientation = p_goal_quat;
-
-    p_goal_pose_pub.publish(p_goal_pose);
-
-    if (!state_locked) {
-        p_goal(0) = x_centre + p_goal_radius * cos(rc_theta);
-        p_goal(1) = y_centre + p_goal_radius * sin(rc_theta);
-        p_goal(2) = flight_altitude;
-    }
-
-    // Upper position of channel 7 is planning mode(1094), middle positon is pause mode(1514),
-    // lower positon is recover trigger(1934)
-    uav_pause = msg.channels[6] > 1200;
-
-    // Recover mode triggered
-    if (msg.channels[6] > 1800) {
-        // If the drone is not in safety mode, there is no need to recover
-        if (!in_safety_mode) {
-            ROS_WARN("No need to recover!");
-            return;
-        }
-
-        safety_mode_recover = true;
-
-        // Resetting flight altitude
-        px4_autonomy::Position traj_pt;
-
-        // Considering that the drone pilot may change the positon of uav after
-        // it has got trapped in safety mode, the drone ought to stay still at the exact place
-        // where it currently stays
-        p_store(0) = p0(0);
-        p_store(1) = p0(1);
-        p_store(2) = flight_altitude;
-        yaw_store = yaw0;
-
-        traj_pt.x = p_store(0);
-        traj_pt.y = p_store(1);
-        traj_pt.z = p_store(2);
-        traj_pt.yaw = yaw_store;
-        traj_pt.pitch = 0.0;  // tentative
-        traj_pt.roll = 0.0;  // tentative
-
-        for (int i = 0; i < 3; ++i) {
-            traj_pt.header.stamp = ros::Time::now();
-            traj_point_pub.publish(traj_pt);
-        }
-
-        rc_theta = yaw0;
-        ROS_INFO("rc_theta: %lf", rc_theta / M_PI * 180.0);
-
-        // Resetting p_goal and visualize it
-        p_goal(0) = x_centre + p_goal_radius * cos(rc_theta);
-        p_goal(1) = y_centre + p_goal_radius * sin(rc_theta);
-        p_goal(2) = flight_altitude;
-
-        p_goal_quat = tf::createQuaternionMsgFromYaw(rc_theta);
-    
-        p_goal_pose.header.stamp = ros::Time::now();
-        p_goal_pose.header.frame_id = "world";
-        p_goal_pose.pose.position.x = p0(0);
-        p_goal_pose.pose.position.y = p0(1);
-        p_goal_pose.pose.position.z = p0(2);
-        p_goal_pose.pose.orientation = p_goal_quat;
-
-        p_goal_pose_pub.publish(p_goal_pose);
-    }
-}
-
 // Visualization of Euclidean distance transform and distinction between obstacles and the ground
 void visCloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud) {
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_env(new pcl::PointCloud<pcl::PointXYZRGB>());
@@ -951,11 +865,6 @@ int main(int argc, char** argv)
 
     ros::Subscriber odom_isolate_sub =  nh.subscribe("/zed/odom", 1, odomCallback);
     ros::Subscriber imu_sub =  nh.subscribe("/zed/imu/data", 1, imuCallback);
-
-    ros::Subscriber p_goal_sub = nh.subscribe("/mavros/rc/in", 1, pGoalCallback);
-
-    ros::Subscriber vis_cloud_sub = nh.subscribe("/ring_buffer/cloud_ob", 1, visCloudCallback);
-
     message_filters::Subscriber<nav_msgs::Odometry> odom_sub(nh, "/zed/odom", 2);
     message_filters::Subscriber<sensor_msgs::PointCloud2> pcl_sub(nh, "/zed/point_cloud/cloud_registered", 1);
     // message_filters::Subscriber<sensor_msgs::Imu> imu_sub(nh, "/firefly/ground_truth/imu", 2);

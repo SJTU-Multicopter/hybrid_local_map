@@ -35,10 +35,8 @@ class EuclideanDistanceNormalRingBuffer
       , tmp_buffer1_(resolution)
       , tmp_buffer2_(resolution)
       , distance_buffer_(resolution, truncation_distance)
-      , distance_buffer_dynamic_(resolution, truncation_distance) //CHG
     {
         distance_buffer_.setEmptyElement(std::numeric_limits<_Scalar>::max());
-        distance_buffer_dynamic_.setEmptyElement(std::numeric_limits<_Scalar>::max()); //CHG
     }
 
     inline void getIdx(const Vector3 &point, Vector3i &idx) const { distance_buffer_.getIdx(point, idx); }
@@ -63,7 +61,7 @@ class EuclideanDistanceNormalRingBuffer
 
     void removePointCloudDynamic(const PointCloud &cloud, const Vector3 &origin)  // CHG
     {
-        occupancy_buffer_.removePointCloudDynamic(cloud, origin);
+        occupancy_buffer_dynamic_.removePointCloudDynamic(cloud, origin);
     }
 
 
@@ -73,7 +71,6 @@ class EuclideanDistanceNormalRingBuffer
         occupancy_buffer_.setOffset(off);
         occupancy_buffer_dynamic_.setOffset(off);
         distance_buffer_.setOffset(off);
-        distance_buffer_dynamic_.setOffset(off);
     }
 
     // Add  moveVolume
@@ -82,7 +79,6 @@ class EuclideanDistanceNormalRingBuffer
         occupancy_buffer_.moveVolume(direction);
         occupancy_buffer_dynamic_.moveVolume(direction);
         distance_buffer_.moveVolume(direction);
-        distance_buffer_dynamic_.moveVolume(direction);
     }
 
     // get ringbuffer as pointcloud
@@ -274,9 +270,69 @@ class EuclideanDistanceNormalRingBuffer
                 break;
             }
         }
-        // std::cout<<"************************"<<std::endl;
         return all_safe;
     }
+
+    Vector3i get_rgb_edf_dynamic(float x, float y, float z) 
+    {
+        Vector3 cloud_point;
+        Vector3i cloud_point_idx;
+        cloud_point(0) = (_Scalar)x;
+        cloud_point(1) = (_Scalar)y;
+        cloud_point(2) = (_Scalar)z;
+
+        distance_buffer_.getIdx(cloud_point, cloud_point_idx);
+        float distance = (float)distance_buffer_.at(cloud_point_idx);
+
+        int value = floor(distance * 240); // Mapping 0~1.0 to 0~240
+        value = value > 240 ? 240 : value;
+
+        // 240 degrees are divided into 4 sections, 0 is Red-dominant, 1 and 2 are Green-dominant,
+        // 3 is Blue-dominant. The dorminant color is 255 and another color is always 0 while the
+        // remaining color increases or decreases between 0~255
+        int section = value / 60;
+        float float_key = (value % 60) / (float)60 * 255;
+        int key = floor(float_key);
+        int nkey = 255 - key;
+
+        Vector3i point_RGB;
+
+        switch(section) {
+            case 0: // G increase
+                point_RGB(0) = 255;
+                point_RGB(1) = key;
+                point_RGB(2) = 0;
+                break;
+            case 1: // R decrease
+                point_RGB(0) = nkey;
+                point_RGB(1) = 255;
+                point_RGB(2) = 0;
+                break;
+            case 2: // B increase
+                point_RGB(0) = 0;
+                point_RGB(1) = 255;
+                point_RGB(2) = key;
+                break;
+            case 3: // G decrease
+                point_RGB(0) = 0;
+                point_RGB(1) = nkey;
+                point_RGB(2) = 255;
+                break;
+            case 4:
+                point_RGB(0) = 0;
+                point_RGB(1) = 0;
+                point_RGB(2) = 255;
+                break;
+            default: // White
+                point_RGB(0) = 255;
+                point_RGB(1) = 255;
+                point_RGB(2) = 255;
+        }
+
+        return point_RGB;
+    }
+
+
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -339,11 +395,12 @@ class EuclideanDistanceNormalRingBuffer
         occupancy_buffer_.clearUpdatedMinMax();
     }
 
-    void compute_edt3d_dynamic(const PointCloud &cloud, const Vector3 &origin)
+    void compute_edt3d_dynamic(const PointCloud &cloud, const Vector3 &origin) // CHG, distance field calculation
     {
-        //TODO copy occupancy_buffer_ to occupancy_buffer_dynamic_ first
-        // convert ring buffer to point cloud
+        // Copy occupancy_buffer_ to occupancy_buffer_dynamic_ first
 
+
+        // convert ring buffer to point cloud to copy by inserting, which is much faster than using "=" directly on class member
         PointCloud static_cloud;
         Vector3i off;
         distance_buffer_.getOffset(off);
@@ -421,12 +478,14 @@ class EuclideanDistanceNormalRingBuffer
                          min_vec[0], max_vec[0]);
             }
         }
-
+        removePointCloudDynamic(static_cloud, origin); //CHG
+        removePointCloudDynamic(cloud, origin); //CHG
         occupancy_buffer_dynamic_.clearUpdatedMinMax();
     }
 
+
     template <typename F_get_val, typename F_set_val>
-    void fill_edt(F_get_val f_get_val, F_set_val f_set_val, int start = 0, int end = _N - 1) // CHG, distance field calculation
+    void fill_edt(F_get_val f_get_val, F_set_val f_set_val, int start = 0, int end = _N - 1) 
     {
         int v[_N];
         _Scalar z[_N + 1];
@@ -476,8 +535,6 @@ class EuclideanDistanceNormalRingBuffer
     RaycastRingBuffer<_POW, _Datatype, _Scalar, _Flag> occupancy_buffer_dynamic_;
 
     RingBufferBase<_POW, _Scalar, _Scalar> distance_buffer_; 
-
-    RingBufferBase<_POW, _Scalar, _Scalar> distance_buffer_dynamic_;  // CHG
 
     RingBufferBase<_POW, _Scalar, _Scalar> tmp_buffer1_, tmp_buffer2_;
 
