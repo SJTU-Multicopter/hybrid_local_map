@@ -1,4 +1,5 @@
-//
+// Coordinate follows mavros 
+
 #include <ewok/ed_nor_ring_buffer.h>
 
 #include <ros/ros.h>
@@ -13,6 +14,7 @@
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/TwistStamped.h>
+#include <geometry_msgs/Point32.h>
 
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -36,6 +38,7 @@
 using namespace message_filters;
 
 #define GRAVATY 9.8
+#define PI_2 1.5708
 
 // global declaration
 ros::Time _data_input_time;
@@ -78,7 +81,8 @@ Eigen::Vector3d p_goal;
 Eigen::Vector3d p0;
 Eigen::Vector3d v0;
 Eigen::Vector3d a0;
-Eigen::VectorXd quad(4); 
+Eigen::Quaternionf quad(1.0, 0.0, 0.0, 0.0);
+//Eigen::VectorXd quad(4); 
 
 double yaw0 = 0.0;  //Keep zero in this edition, the sampled directions are from all sides
 double theta_h_last = 0.0;
@@ -108,6 +112,9 @@ struct  Path_Planning_Parameters
 double p_goal_radius = 100.0;
 double flight_altitude = 1.5;
 
+double motor_yaw = 0.0;
+double motor_yaw_rate = 0.0;
+
 /**************************************************/
 
 // this callback use input cloud to update ring buffer, and update odometry of UAV
@@ -116,64 +123,62 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
     ROS_INFO("Received Point Cloud!");
     _data_input_time = ros::Time::now();
 
-    tf::Quaternion q1(quad(0), quad(1), quad(2), quad(3));
+    // Add the rotation of head
+    Eigen::Quaternionf q1(0, 0, 0, 1);
+    Eigen::Quaternionf axis = quad * q1 * quad.inverse();
+    axis.w() = cos(motor_yaw/2.0);
+    axis.x() = axis.x() * sin(motor_yaw/2.0);
+    axis.y() = axis.y() * sin(motor_yaw/2.0);
+    axis.z() = axis.z() * sin(motor_yaw/2.0);
+    Eigen::Quaternionf quad_rotate = quad * axis;
 
-    tf::Matrix3x3 m(q1);
-    double roll, pitch, yaw;
-    m.getRPY(roll, pitch, yaw);
-
-    // update ring buffer
-    // tranform from optical frame to uav frame
-    Eigen::Matrix4f t_c_b = Eigen::Matrix4f::Zero();
-    t_c_b(0, 2) = 1;
-    t_c_b(1, 0) = -1;
-    t_c_b(2, 1) = -1;
-    t_c_b(3, 3) = 1;
-
-    // transform from uav to world
-    // get orientation and translation
-    Eigen::Quaternionf q;
-    
-    q.x() = quad(0);
-    q.y() = quad(1);
-    q.z() = quad(2);
-    q.w() = quad(3);
 
     // create transform matrix
     Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
-    transform.block(0, 0, 3, 3) = Eigen::Matrix3f(q);
+    transform.block(0, 0, 3, 3) = Eigen::Matrix3f(quad_rotate);
     transform(0, 3) = p0(0);
     transform(1, 3) = p0(1);
     transform(2, 3) = p0(2);
     // std::cout << transform.matrix() << "\n\n";
 
     // convert cloud to pcl form
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_in(new pcl::PointCloud<pcl::PointXYZRGB>());
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_in(new pcl::PointCloud<pcl::PointXYZ>());
     pcl::fromROSMsg(*cloud, *cloud_in);
-    // transform to world frame
-    //pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_2(new pcl::PointCloud<pcl::PointXYZRGB>());
-    //pcl::transformPointCloud(*cloud_in, *cloud_2, transform);
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_1(new pcl::PointCloud<pcl::PointXYZRGB>());
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_2(new pcl::PointCloud<pcl::PointXYZRGB>());
-    // pcl::transformPointCloud(*cloud_in, *cloud_1, t_c_b);
-    // pcl::transformPointCloud(*cloud_1, *cloud_2, transform);
-
-    // t_c_b is never needed when used in the real world
-    pcl::transformPointCloud(*cloud_in, *cloud_2, transform);
 
     // down-sample for all
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZRGB>());
-    pcl::VoxelGrid<pcl::PointXYZRGB> sor;
-    sor.setInputCloud(cloud_2);
-    float res = 0.1f;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered(new pcl::PointCloud<pcl::PointXYZ>());
+    pcl::VoxelGrid<pcl::PointXYZ> sor;
+    sor.setInputCloud(cloud_in);
+    float res = 0.2f;
     sor.setLeafSize(res, res, res);
     sor.filter(*cloud_filtered);
+
+    double elp_sample = ros::Time::now().toSec() - _data_input_time.toSec();
+    std::cout << "Map sample time = " << elp_sample << " s" << std::endl;
+
+    // transform to world frame
+    Eigen::Matrix4f t_c_b = Eigen::Matrix4f::Zero();
+    t_c_b(0, 2) = 1;
+    t_c_b(1, 0) = -1;
+    t_c_b(2, 1) = -1;
+    t_c_b(3, 3) = 1;
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_1(new pcl::PointCloud<pcl::PointXYZ>());
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_2(new pcl::PointCloud<pcl::PointXYZ>());
+    pcl::transformPointCloud(*cloud_filtered, *cloud_1, t_c_b);
+    pcl::transformPointCloud(*cloud_1, *cloud_2, transform);
+
+    double elp1 = ros::Time::now().toSec() - _data_input_time.toSec();
+    std::cout << "Map transfer time = " << elp1 << " s" << std::endl;
+
+    // t_c_b is never needed when used in the real world
+    //pcl::transformPointCloud(*cloud_in, *cloud_2, transform);
 
     // compute ewol pointcloud and origin
     Eigen::Vector3f origin = (transform * Eigen::Vector4f(0, 0, 0, 1)).head<3>(); //  position (x,y,z)
     ewok::EuclideanDistanceNormalRingBuffer<POW>::PointCloud cloud_ew;
-    std::vector<pcl::PointXYZRGB, Eigen::aligned_allocator<pcl::PointXYZRGB> > points =
-            cloud_filtered->points; //  cloud_2->points;
+    std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ> > points =
+            cloud_2->points; //  cloud_2->points;
 
     x_centre =  p0(0);
     y_centre =  p0(1);
@@ -216,11 +221,18 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
         }
     }
 
+    double preprocess = ros::Time::now().toSec() - _data_input_time.toSec();
+    std::cout << "Map preprocess time = " << preprocess << " s" << std::endl;
+
     // insert point cloud to ringbuffer
     rrb.insertPointCloud(cloud_ew, origin);
 
+    double insert_t = ros::Time::now().toSec() - _data_input_time.toSec();
+    std::cout << "Map insert time = " << insert_t << " s" << std::endl;
+
     // Calculate distance field consider newly imported points (dynamic points)
     rrb.updateDistanceDynamic(cloud_ew, origin);
+    //rrb.updateDistance();
 
     double elp = ros::Time::now().toSec() - _data_input_time.toSec();
     std::cout << "Map update time = " << elp << " s" << std::endl;
@@ -553,10 +565,10 @@ void positionCallback(const geometry_msgs::PoseStamped& msg)
         p0(1) = msg.pose.position.y;
         p0(2) = msg.pose.position.z;
 
-        quad(0) = msg.pose.orientation.x;
-        quad(1) = msg.pose.orientation.y;
-        quad(2) = msg.pose.orientation.z;
-        quad(3) = msg.pose.orientation.w;
+        quad.x() = msg.pose.orientation.x;
+        quad.y() = msg.pose.orientation.y;
+        quad.z() = msg.pose.orientation.z;
+        quad.w() = msg.pose.orientation.w;
 
         if (!in_safety_mode) {
             p_store = p0;
@@ -578,6 +590,24 @@ void velocityCallback(const geometry_msgs::TwistStamped& msg)
         v0(2) = msg.twist.linear.z;
 
         state_updating = false;
+    }
+}
+
+
+void motorCallback(const geometry_msgs::Point32& msg)
+{
+    static bool init_time = true;
+    static double init_yaw = 0.0;
+
+    if(init_time)
+    {
+        init_yaw = msg.x;
+        init_time = false;
+    }
+    else
+    {
+        motor_yaw = -msg.x + init_yaw; //start with zero
+        motor_yaw_rate = -msg.y;
     }
 }
 
@@ -700,8 +730,6 @@ int main(int argc, char** argv)
     p0 << 0.0, 0.0, 0.0;
     v0 << 0.0, 0.0, 0.0;
     a0 << 0.0, 0.0, 0.0;
-    quad << 0.0, 0.0, 0.0, 1.0;
-
     // Fov sample parameters
     Fov_half << 35, 20;
     // Horizontal angles larger than 90 degree are deleted
@@ -741,11 +769,9 @@ int main(int argc, char** argv)
 
     ros::Subscriber position_isolate_sub =  nh.subscribe("/mavros/local_position/pose", 1, positionCallback);
     ros::Subscriber velocity_isolate_sub = nh.subscribe("/mavros/local_position/velocity", 1, velocityCallback);
-    // ros::Subscriber imu_sub =  nh.subscribe("/zed/imu/data", 1, imuCallback);  //Let a0 == 0 always. measurement is not precise
+    ros::Subscriber motor_sub = nh.subscribe("/place_velocity_info", 1, motorCallback);
 
     ros::Subscriber cloud_sub = nh.subscribe("/camera/depth/color/points", 1, cloudCallback);
-
-//    ros::Subscriber p_goal_sub = nh.subscribe("/mavros/rc/in", 1, pGoalCallback);
 
     // timer for publish ringbuffer as pointcloud
     ros::Timer timer1 = nh.createTimer(ros::Duration(0.2), timerCallback); // RATE 5 Hz to publish
