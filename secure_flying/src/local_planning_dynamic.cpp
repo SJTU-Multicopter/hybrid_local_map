@@ -38,13 +38,12 @@
 using namespace message_filters;
 
 #define GRAVATY 9.8
+#define PIx2 6.28318
+#define PI 3.14159
 #define PI_2 1.5708
 
-// global declaration
-ros::Time _data_input_time;
-ros::Time _algorithm_time;
 
-bool initialized = false;
+/**** Parameters to tune, some initialization needs to be changed in main function ****/
 const double resolution = 0.2;
 
 static const int POW = 6;
@@ -52,41 +51,16 @@ static const int N = (1 << POW);
 
 const float cal_duration = 0.05;
 
-ewok::EuclideanDistanceNormalRingBuffer<POW> rrb(resolution, 1.0);
+ewok::EuclideanDistanceNormalRingBuffer<POW> rrb(resolution, 1.0); //Distance truncation threshold
 
-ros::Publisher current_marker_pub;
-ros::Publisher cloud2_pub, cloud_edf_pub, center_pub;
-
-ros::Publisher traj_point_pub; // add on 9 Mar
-
-double x_centre, y_centre, z_centre;
-
-bool objects_updated = false;
-bool imu_initilized = false;
-bool state_locked = false;
-bool state_updating = false;
-bool in_safety_mode = true;
-
-/****** Parameters for path planning ******/
 const int ANGLE_H_NUM = 17;
 const int ANGLE_V_NUM = 7;
-Eigen::VectorXd Fov_half(2); //Fov parameters
-Eigen::VectorXd Angle_h(ANGLE_H_NUM);  // initiate later in the main function
-Eigen::VectorXd Angle_v(ANGLE_V_NUM); // initiate later in the main function
 
-Eigen::Vector3d p_goal;
-Eigen::Vector3d p0;
-Eigen::Vector3d v0;
-Eigen::Vector3d a0;
-Eigen::Quaternionf quad(1.0, 0.0, 0.0, 0.0);
-//Eigen::VectorXd quad(4); 
-
-double yaw0 = 0.0;  //Keep zero in this edition, the sampled directions are from all sides
-double theta_h_last = 0.0;
-double theta_v_last = 0.0;
-
-Eigen::Vector3d p_store;
-double yaw_store = 0.0;
+const int LOOKING_PIECES_SIZE = 18; // Should be even, Resolution: 20 degrees one piece. MID=8. Yaw=0. Larger: 9 - 17 :  0 to Pi;  Smaller: 7-0 : 0 to (nearly)-Pi;
+const float CAMERA_H_FOV = 62;  //degrees
+const float HEAD_BUFFER_HIT_INCREASE = 0.4;
+const float HEAD_BUFFER_MISS_DECREASE_STANDARD_V = 0.05; // Miss add value when velocity is 1m/s
+const float HEAD_BUFFER_MISS_DECREASE_MIN = 0.05;
 
 struct  Path_Planning_Parameters
 {
@@ -101,14 +75,159 @@ struct  Path_Planning_Parameters
     int max_plan_num = ANGLE_H_NUM * ANGLE_V_NUM;  // Previously it was 100, as 18*7 = 126 > 100
 }pp;
 
-// Flight_altitude can be larger.
-double p_goal_radius = 100.0;
-double flight_altitude = 1.5;
+struct  Head_Planning_Parameters
+{
+   double k_current_v = 0.5;
+   double k_planned_dir = 0.3;
+   double k_v_fluctuation = 0.1;
+}hp;
+
+/*** End of Parameters ***/
+
+/** Basic global variables **/
+ros::Publisher current_marker_pub;
+ros::Publisher cloud2_pub, cloud_edf_pub, center_pub;
+
+ros::Publisher traj_point_pub; // add on 9 Mar
+ros::Publisher head_cmd_pub; // add on 9 Mar
+
+double x_centre, y_centre, z_centre;
+
+bool objects_updated = false;
+bool imu_initilized = false;
+bool state_locked = false;
+bool state_updating = false;
+bool in_safety_mode = true;
+
+/****** Global variables for path planning ******/
+ros::Time _data_input_time;
+ros::Time _algorithm_time;
+
+bool initialized = false;
+
+Eigen::VectorXd Fov_half(2); //Fov parameters
+Eigen::VectorXd Angle_h(ANGLE_H_NUM);  // initiate later in the main function, rad
+Eigen::VectorXd Angle_v(ANGLE_V_NUM); // initiate later in the main function, rad
+
+Eigen::Vector3d p_goal;
+Eigen::Vector3d p0;
+Eigen::Vector3d v0;
+Eigen::Vector3d a0;
+Eigen::Quaternionf quad(1.0, 0.0, 0.0, 0.0);
+double yaw0;
+double v_direction;
+//Eigen::VectorXd quad(4); 
+
+double yaw_init = 0.0;  //Keep zero in this edition, the sampled directions are from all sides
+double theta_h_last = 0.0;
+double theta_v_last = 0.0;
+
+Eigen::Vector3d p_store;
+double yaw_store = 0.0;
+
+
+/*** Global variables for rotatin head ***/
+Eigen::VectorXf _direction_update_buffer; // Range [0, 1]
+float heading_resolution;
+int valid_piece_num_one_side;
+int mid_seq_num; 
 
 double motor_yaw = 0.0;
 double motor_yaw_rate = 0.0;
 
+/** Declaration of functions**/
+
+void sendMotorCommands(double yaw, double yaw_rate_abs);
+
 /**************************************************/
+
+double getHeadingYawFromSeq(int seq)
+{
+    if(seq >= LOOKING_PIECES_SIZE || seq < 0){
+        ROS_ERROR("Seq for yaw buffer of the head out of range.");
+        return 0.f;
+    }
+    else{
+        return (seq - mid_seq_num) * heading_resolution;
+    }
+}
+
+int getHeadingSeq(float direction)
+{
+    if(direction > PI){
+        direction -= PIx2;
+    }
+    else if(direction < -PI){
+        direction += PIx2;
+    } 
+
+    if(direction > 0){  // To sovle the truncation problem
+        direction += heading_resolution / 2.f;
+    }
+    else{
+        direction -= heading_resolution / 2.f;  
+    }
+    /// Caution!!!!! the rotating range of the camera can only be within (-PI-heading_resolution, PI+heading_resolution), chg
+    int heading_seq =  (int)(direction / heading_resolution) + mid_seq_num;  
+
+    if(heading_seq < 0) heading_seq = LOOKING_PIECES_SIZE - 1;
+
+    return heading_seq;
+}
+
+void addHitOnePiece(int seq)
+{
+    if(seq >= LOOKING_PIECES_SIZE){   // to form a ring
+        seq = seq - LOOKING_PIECES_SIZE;
+    }
+    else if(seq < 0){
+        seq = seq + LOOKING_PIECES_SIZE;
+    }
+
+    _direction_update_buffer(seq)+HEAD_BUFFER_HIT_INCREASE<1.f ? _direction_update_buffer(seq)+=(float)HEAD_BUFFER_HIT_INCREASE : _direction_update_buffer(seq)=1.f;
+}
+
+void addMissOnePiece(int seq)
+{
+    if(seq >= LOOKING_PIECES_SIZE){ // to form a ring
+        seq = seq - LOOKING_PIECES_SIZE;
+    }
+    else if(seq < 0){
+        seq = seq + LOOKING_PIECES_SIZE;
+    }
+
+    float delt_miss = HEAD_BUFFER_MISS_DECREASE_MIN;
+    float delt_miss_by_velocity = HEAD_BUFFER_MISS_DECREASE_STANDARD_V * std::max(fabs(v0(0)), fabs(v0(1)));
+    if(delt_miss_by_velocity > delt_miss){
+        delt_miss = delt_miss_by_velocity;
+    }
+
+    _direction_update_buffer(seq)-delt_miss<0.f ? _direction_update_buffer(seq)-=delt_miss : _direction_update_buffer(seq)=0.f;
+}
+
+void updateHeadBuffer(const float &heading_direction_seq)
+{
+    Eigen::VectorXi update_flag_buf = Eigen::VectorXi::Zero(LOOKING_PIECES_SIZE);
+
+    //Add hit for the direction in FOV
+    addHitOnePiece(heading_direction_seq);
+    update_flag_buf(heading_direction_seq) = 1; 
+
+    for(int i=1; i<=valid_piece_num_one_side; i++){
+        addHitOnePiece(heading_direction_seq + i);
+        addHitOnePiece(heading_direction_seq - i);
+
+        update_flag_buf(heading_direction_seq + i) = 1;
+        update_flag_buf(heading_direction_seq - i) = 1;
+    }
+    //Add miss for the rest
+    for(int j=0; j<LOOKING_PIECES_SIZE; j++){
+        if(update_flag_buf(j) != 1){
+            addMissOnePiece(j);
+        } 
+    }
+}
+
 
 // this callback use input cloud to update ring buffer, and update odometry of UAV
 void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
@@ -172,9 +291,9 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
     ewok::EuclideanDistanceNormalRingBuffer<POW>::PointCloud cloud_ew;
     std::vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ> > points = cloud_2->points; //  cloud_2->points;
 
-    x_centre =  p0(0);
-    y_centre =  p0(1);
-    z_centre =  p0(2);
+    x_centre = p0(0);
+    y_centre = p0(1);
+    z_centre = p0(2);
 
     for(int i = 0; i < points.size(); ++i)
     {
@@ -214,13 +333,13 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
     }
 
     double preprocess = ros::Time::now().toSec() - _data_input_time.toSec();
-    std::cout << "Map preprocess time = " << preprocess << " s" << std::endl;
+    //std::cout << "Map preprocess time = " << preprocess << " s" << std::endl;
 
     // insert point cloud to ringbuffer
     rrb.insertPointCloud(cloud_ew, origin);
 
     double insert_t = ros::Time::now().toSec() - _data_input_time.toSec();
-    std::cout << "Map insert time = " << insert_t << " s" << std::endl;
+    //std::cout << "Map insert time = " << insert_t << " s" << std::endl;
 
     // Calculate distance field consider newly imported points (dynamic points)
     rrb.updateDistanceDynamic(cloud_ew, origin);
@@ -228,6 +347,10 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
 
     double elp = ros::Time::now().toSec() - _data_input_time.toSec();
     std::cout << "Map update time = " << elp << " s" << std::endl;
+
+    /* Update buffer for rolling head */
+    int heading_direction_seq = getHeadingSeq(motor_yaw);  //current heading direction
+    updateHeadBuffer(heading_direction_seq);
 }
 
 void timerCallback(const ros::TimerEvent& e)
@@ -300,12 +423,13 @@ void timerCallback(const ros::TimerEvent& e)
 
 }
 
-void motion_primitives(Eigen::Vector3d p0, Eigen::Vector3d v0, Eigen::Vector3d a0, double yaw0, double theta_h,
+/** This function is to generate state to state trajectory **/
+void motion_primitives(Eigen::Vector3d p0, Eigen::Vector3d v0, Eigen::Vector3d a0, double yaw_current, double theta_h,
                        double theta_v, Eigen::Vector3d goal, double d, double v_max, double delt_t,
                        Eigen::MatrixXd &p, Eigen::MatrixXd &v, Eigen::MatrixXd &a, Eigen::VectorXd &t)
 {
-    double delt_x = d*cos(theta_v)*cos(theta_h+yaw0);
-    double delt_y = d*cos(theta_v)*sin(theta_h+yaw0);
+    double delt_x = d*cos(theta_v)*cos(theta_h+yaw_current);
+    double delt_y = d*cos(theta_v)*sin(theta_h+yaw_current);
     double delt_z = d*sin(theta_v);
 
     Eigen::Vector3d pf;
@@ -416,9 +540,14 @@ void marker_publish(Eigen::MatrixXd &Points)
     current_marker_pub.publish(line_strip);
 }
 
-// void trajectoryCallback(Eigen::Vector3d &p_goal, Eigen::Vector3d &p0, Eigen::Vector3d &v0, Eigen::Vector3d &a0, double &yaw0)
+
+
+/** This is the function to generate the collision-free path, which is trigered by a timer defined in main function. **/
 void trajectoryCallback(const ros::TimerEvent& e) {
-    if(!state_updating)
+    /** Generate trajectory for uav first***/
+    double theta_h_chosen;
+
+    if(!state_updating) /// Need to rethink the necessity of this lock!!!! CHG
     {
         // To do: Update p_goal in accordance with keyboard/joy command
         state_locked = true;
@@ -480,13 +609,14 @@ void trajectoryCallback(const ros::TimerEvent& e) {
 
         bool flag = false;
 
+        theta_h_chosen = theta_h_last; //if the uav is in safe mode, this would be the last value so the head wont rotate
         for(int seq=0; seq<pp.max_plan_num; seq++)
         {
             Eigen::MatrixXd p;
             Eigen::MatrixXd v;
             Eigen::MatrixXd a;
             Eigen::VectorXd t;
-            motion_primitives(p0, v0, a0, yaw0, cost(seq,1), cost(seq,2), p_goal, cost(seq,3), v_max, pp.delt_t, p, v, a, t);
+            motion_primitives(p0, v0, a0, yaw_init, cost(seq,1), cost(seq,2), p_goal, cost(seq,3), v_max, pp.delt_t, p, v, a, t);
 
             // Get points number on the path
             const int Num = p.rows();
@@ -504,6 +634,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
             if(flag)
             {
                 ROS_INFO("traj_safe");
+                theta_h_chosen = cost(seq,1); 
                 theta_h_last = cost(seq,1); // Update last theta
                 theta_v_last = cost(seq,2);
 
@@ -519,6 +650,9 @@ void trajectoryCallback(const ros::TimerEvent& e) {
                     }
                     show_points.row(point_num_pub) = p.row(Num-1);
                     marker_publish(show_points);
+
+                    // TODO: Publish control values of the UAV in obstacle avoidance mode here, chg
+
                 }
 
                 break;
@@ -529,7 +663,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
             }
         }
 
-        if(!flag){
+        if(!flag){  // Safety mode
             ROS_WARN("No valid trajectory found! Trapped in safety mode!");
             in_safety_mode = true;
 
@@ -542,9 +676,11 @@ void trajectoryCallback(const ros::TimerEvent& e) {
             traj_pt.z = p_store(2);
             traj_pt.yaw = yaw_store;
 
+            // TODO: Change the control values in safety mode here, chg
+
             for (int i = 0; i < 3; ++i) {
                 traj_pt.header.stamp = ros::Time::now();
-                traj_point_pub.publish(traj_pt);
+                traj_point_pub.publish(traj_pt);  
             }
 
             Eigen::MatrixXd show_points = Eigen::MatrixXd::Zero(6, 3);
@@ -561,11 +697,46 @@ void trajectoryCallback(const ros::TimerEvent& e) {
         ROS_INFO("algorithm time is: %lf", algo_time);
         _algorithm_time = ros::Time::now();
 
-        // TODO: Publish the control values
+        /// TODO: Publish the control values, chg
 
         state_locked = false;
     }
 
+    /** Generate trajectory for rotating head **/
+    static double last_head_yaw_plan = 0.0;
+    static double first_head_control_flag = true;
+    if(first_head_control_flag){
+        first_head_control_flag = false;
+        sendMotorCommands(0.0, 0.3);
+    }
+    else{
+        /// Rank by the cost given from current velocity direction, the sampled last direction and the last planned head direction
+        Eigen::VectorXd cost_vector = Eigen::VectorXd::Zero(LOOKING_PIECES_SIZE);
+
+        /// Current velocity direction(v_direction), planned velocity direction(theta_h_chosen), yaw of the head must be in the same coordinate!!
+        double yaw_to_send, yaw_rate_to_send;
+
+        double coefficient_current_v =  1.0 - _direction_update_buffer(getHeadingSeq(v_direction));
+        double coefficient_planned_dir =  1.0 - _direction_update_buffer(getHeadingSeq(theta_h_chosen));
+
+        double min_head_plan_cost = 10000000.0;
+        for(int i=0; i<LOOKING_PIECES_SIZE; i++){
+            double head_yaw_plan_temp = getHeadingYawFromSeq(i);
+            double cost_temp = hp.k_current_v * (v_direction-head_yaw_plan_temp) * (v_direction-head_yaw_plan_temp) * coefficient_current_v
+                               + hp.k_planned_dir * (theta_h_chosen-head_yaw_plan_temp) * (theta_h_chosen-head_yaw_plan_temp) * coefficient_planned_dir
+                               + hp.k_v_fluctuation * (head_yaw_plan_temp - last_head_yaw_plan) * (head_yaw_plan_temp - last_head_yaw_plan);
+            if(cost_temp < min_head_plan_cost)
+            {
+                min_head_plan_cost = cost_temp;
+                yaw_to_send = head_yaw_plan_temp;
+            }
+        }
+
+        yaw_rate_to_send = 0.6; // const speed for now
+        sendMotorCommands(yaw_to_send, yaw_rate_to_send); //send to motor
+
+        last_head_yaw_plan = yaw_to_send;
+    }
 }
 
 
@@ -575,18 +746,23 @@ void positionCallback(const geometry_msgs::PoseStamped& msg)
     {
         state_updating = true;
 
-        p0(0) = msg.pose.position.x;
-        p0(1) = msg.pose.position.y;
+        /** Change from ENU to NWU, NEEDS CAREFUL CHECKING!!!!, chg**/
+        p0(0) = msg.pose.position.y;
+        p0(1) = -msg.pose.position.x;
         p0(2) = msg.pose.position.z;
 
-        quad.x() = msg.pose.orientation.x;
-        quad.y() = msg.pose.orientation.y;
+        quad.x() = msg.pose.orientation.y;
+        quad.y() = -msg.pose.orientation.x;   
         quad.z() = msg.pose.orientation.z;
         quad.w() = msg.pose.orientation.w;
 
+        /// Update yaw0 here, should be among [-PI, PI] 
+        Eigen::Vector3f eulerAngle=quad.matrix().eulerAngles(2,1,0); //Z-Y-X, namely RPY
+        yaw0 = eulerAngle(2);
+        ROS_INFO("Current yaw = %f", yaw0);
+
         if (!in_safety_mode) {
             p_store = p0;
-            yaw_store = yaw0;
         }
         state_updating = false;
     }
@@ -599,19 +775,22 @@ void velocityCallback(const geometry_msgs::TwistStamped& msg)
     {
         state_updating = true;
 
-        v0(0) = msg.twist.linear.x;
-        v0(1) = msg.twist.linear.y;
+        /** Change from ENU to NWU, NEEDS CAREFUL CHECKING!!!!, chg**/
+        v0(0) = msg.twist.linear.y;
+        v0(1) = -msg.twist.linear.x;
         v0(2) = msg.twist.linear.z;
+        v_direction = atan2(v0(1), v0(0));
+
+        ROS_INFO("v_direction(yaw) = %f", v_direction);
 
         state_updating = false;
     }
 }
 
-
+double init_yaw = 0.0;
 void motorCallback(const geometry_msgs::Point32& msg)
 {
     static bool init_time = true;
-    static double init_yaw = 0.0;
 
     if(init_time)
     {
@@ -620,11 +799,18 @@ void motorCallback(const geometry_msgs::Point32& msg)
     }
     else
     {
-        motor_yaw = -msg.x + init_yaw; //start with zero
+        motor_yaw = -msg.x + init_yaw; // + PI_2?? //start with zero, original z for motor is down. now turn to ENU coordinate. Head forward is PI/2 ???????????
         motor_yaw_rate = -msg.y;
     }
 }
 
+void sendMotorCommands(double yaw, double yaw_rate_abs)
+{
+    static geometry_msgs::Point32 head_cmd;
+    head_cmd.x = -yaw + init_yaw;  // + PI_2??  CHG
+    head_cmd.y = yaw_rate_abs;
+    head_cmd_pub.publish(head_cmd);
+}
 
 int main(int argc, char** argv)
 {
@@ -632,10 +818,13 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
 
     // State parameters initiate
-    p_goal << 0.0, 20.0, 1.5;
+    p_goal << 0.0, 20.0, 1.5;  //x, y, z
     p0 << 0.0, 0.0, 0.0;
     v0 << 0.0, 0.0, 0.0;
     a0 << 0.0, 0.0, 0.0;
+    yaw0 = 0.0;
+    v_direction = 0.0;
+
     // Fov sample parameters
     Fov_half << 35, 20;
     // Horizontal angles larger than 90 degree are deleted
@@ -647,6 +836,21 @@ int main(int argc, char** argv)
     Angle_v = Angle_v * M_PI / 180.0;
     Fov_half = Fov_half * M_PI / 180.0;
 
+    _direction_update_buffer = Eigen::VectorXf::Zero(LOOKING_PIECES_SIZE); 
+    heading_resolution =  2.f * PI / (float)LOOKING_PIECES_SIZE;
+    mid_seq_num = LOOKING_PIECES_SIZE / 2 - 1; // start from 0, mid is 8 when LOOKING_PIECES_SIZE is 18
+
+    int valid_piece_num = (int)((float)CAMERA_H_FOV / PI / heading_resolution);
+    if(valid_piece_num % 2 == 0)  valid_piece_num -= 1;
+    if(valid_piece_num < 1){
+        ROS_ERROR("No enough view field with the current camera set!");
+        return 0;
+    }
+    valid_piece_num_one_side = (valid_piece_num - 1) / 2;
+
+    ROS_INFO("Heading resolution = %f (rad), Fov = %f, valid_piece_num = %d", heading_resolution, CAMERA_H_FOV, valid_piece_num);
+
+
     // ringbuffer cloud2
     cloud2_pub = nh.advertise<sensor_msgs::PointCloud2>("/ring_buffer/cloud_ob", 1, true);
     cloud_edf_pub = nh.advertise<sensor_msgs::PointCloud2>("/ring_buffer/edf", 1, true);
@@ -655,11 +859,12 @@ int main(int argc, char** argv)
     current_marker_pub = nh.advertise<visualization_msgs::Marker>("/visualization_marker", 1);
 
     traj_point_pub = nh.advertise<px4_autonomy::Position>("/px4/cmd_pose", 5, true); // add on 9 Mar
+    head_cmd_pub = nh.advertise<geometry_msgs::Point32>("/gimbal_commands", 2, true); 
 
     ros::Subscriber position_isolate_sub =  nh.subscribe("/mavros/local_position/pose", 1, positionCallback);
     ros::Subscriber velocity_isolate_sub = nh.subscribe("/mavros/local_position/velocity", 1, velocityCallback);
-    ros::Subscriber motor_sub = nh.subscribe("/place_velocity_info", 1, motorCallback);
 
+    ros::Subscriber motor_sub = nh.subscribe("/place_velocity_info", 1, motorCallback);
     ros::Subscriber cloud_sub = nh.subscribe("/camera/depth/color/points", 1, cloudCallback);
 
     // timer for publish ringbuffer as pointcloud
