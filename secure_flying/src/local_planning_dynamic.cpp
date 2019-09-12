@@ -184,7 +184,7 @@ void addHitOnePiece(int seq)
         seq = seq + LOOKING_PIECES_SIZE;
     }
 
-    _direction_update_buffer(seq)+HEAD_BUFFER_HIT_INCREASE<1.f ? _direction_update_buffer(seq)+=(float)HEAD_BUFFER_HIT_INCREASE : _direction_update_buffer(seq)=1.f;
+    _direction_update_buffer(seq)+HEAD_BUFFER_HIT_INCREASE<=1.f ? _direction_update_buffer(seq)+=(float)HEAD_BUFFER_HIT_INCREASE : _direction_update_buffer(seq)=1.f;
 }
 
 void addMissOnePiece(int seq)
@@ -202,10 +202,10 @@ void addMissOnePiece(int seq)
         delt_miss = delt_miss_by_velocity;
     }
 
-    _direction_update_buffer(seq)-delt_miss<0.f ? _direction_update_buffer(seq)-=delt_miss : _direction_update_buffer(seq)=0.f;
+    _direction_update_buffer(seq)-delt_miss>=0.f ? _direction_update_buffer(seq)-=delt_miss : _direction_update_buffer(seq)=0.f;
 }
 
-void updateHeadBuffer(const float &heading_direction_seq)
+void updateHeadBuffer(const int &heading_direction_seq)
 {
     Eigen::VectorXi update_flag_buf = Eigen::VectorXi::Zero(LOOKING_PIECES_SIZE);
 
@@ -704,10 +704,11 @@ void trajectoryCallback(const ros::TimerEvent& e) {
 
     /** Generate trajectory for rotating head **/
     static double last_head_yaw_plan = 0.0;
-    static double first_head_control_flag = true;
+    static bool first_head_control_flag = true;
+
     if(first_head_control_flag){
         first_head_control_flag = false;
-        sendMotorCommands(0.0, 0.3);
+        sendMotorCommands(0.0, 0.5);
     }
     else{
         /// Rank by the cost given from current velocity direction, the sampled last direction and the last planned head direction
@@ -718,6 +719,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
 
         double coefficient_current_v =  1.0 - _direction_update_buffer(getHeadingSeq(v_direction));
         double coefficient_planned_dir =  1.0 - _direction_update_buffer(getHeadingSeq(theta_h_chosen));
+        ROS_INFO("coefficient_current_v=%lf, coefficient_planned_dir=%lf", coefficient_current_v, coefficient_planned_dir);
 
         double min_head_plan_cost = 10000000.0;
         for(int i=0; i<LOOKING_PIECES_SIZE; i++){
@@ -732,7 +734,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
             }
         }
 
-        yaw_rate_to_send = 0.6; // const speed for now
+        yaw_rate_to_send = 0.9; // const speed for now
         sendMotorCommands(yaw_to_send, yaw_rate_to_send); //send to motor
 
         last_head_yaw_plan = yaw_to_send;
@@ -757,8 +759,9 @@ void positionCallback(const geometry_msgs::PoseStamped& msg)
         quad.w() = msg.pose.orientation.w;
 
         /// Update yaw0 here, should be among [-PI, PI] 
-        Eigen::Vector3f eulerAngle=quad.matrix().eulerAngles(2,1,0); //Z-Y-X, namely RPY
-        yaw0 = eulerAngle(2);
+        yaw0 = atan2(2*(quad.w()*quad.z()+quad.x()*quad.y()), 1-2*(quad.z()*quad.z()+quad.y()*quad.y())) - PI_2;
+        if(yaw0 < -PI) yaw0 += PIx2;
+
         ROS_INFO("Current yaw = %f", yaw0);
 
         if (!in_safety_mode) {
@@ -779,9 +782,14 @@ void velocityCallback(const geometry_msgs::TwistStamped& msg)
         v0(0) = msg.twist.linear.y;
         v0(1) = -msg.twist.linear.x;
         v0(2) = msg.twist.linear.z;
-        v_direction = atan2(v0(1), v0(0));
+        if(fabs(v0(0)) > 0.1 || fabs(v0(1)) > 0.1){  //add a dead zone
+            v_direction = atan2(v0(1), v0(0));  
+        }
+        else{
+            v_direction = 0.0;
+        }
 
-        ROS_INFO("v_direction(yaw) = %f", v_direction);
+        ROS_INFO("v_direction(yaw) = %f, v0(0)=%f, v0(1)=%f", v_direction, v0(0), v0(1));
 
         state_updating = false;
     }
@@ -804,11 +812,11 @@ void motorCallback(const geometry_msgs::Point32& msg)
     }
 }
 
-void sendMotorCommands(double yaw, double yaw_rate_abs)
+void sendMotorCommands(double yaw, double yaw_rate_abs) // Range[-Pi, Pi], [0, 1]
 {
     static geometry_msgs::Point32 head_cmd;
     head_cmd.x = -yaw + init_yaw;  // + PI_2??  CHG
-    head_cmd.y = yaw_rate_abs;
+    head_cmd.y = yaw_rate_abs * 72;
     head_cmd_pub.publish(head_cmd);
 }
 
@@ -838,7 +846,7 @@ int main(int argc, char** argv)
 
     _direction_update_buffer = Eigen::VectorXf::Zero(LOOKING_PIECES_SIZE); 
     heading_resolution =  2.f * PI / (float)LOOKING_PIECES_SIZE;
-    mid_seq_num = LOOKING_PIECES_SIZE / 2 - 1; // start from 0, mid is 8 when LOOKING_PIECES_SIZE is 18
+    mid_seq_num = (int)(LOOKING_PIECES_SIZE / 2 - 1); // start from 0, mid is 8 when LOOKING_PIECES_SIZE is 18
 
     int valid_piece_num = (int)((float)CAMERA_H_FOV / PI / heading_resolution);
     if(valid_piece_num % 2 == 0)  valid_piece_num -= 1;
