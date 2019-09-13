@@ -44,7 +44,7 @@ using namespace message_filters;
 
 
 /**** Parameters to tune, some initialization needs to be changed in main function ****/
-const double resolution = 0.2;
+const double resolution = 0.1;
 
 static const int POW = 6;
 static const int N = (1 << POW);
@@ -64,7 +64,7 @@ const float HEAD_BUFFER_MISS_DECREASE_MIN = 0.05;
 
 struct  Path_Planning_Parameters
 {
-    double d_ref = 3.0;
+    double d_ref = 1.5;
     double k1_xy = 2; //% Goal directed coefficient
     double k1_z = 2; //% Goal directed coefficient
     double k2_xy = 4; //% Rotation coefficient
@@ -77,9 +77,9 @@ struct  Path_Planning_Parameters
 
 struct  Head_Planning_Parameters
 {
-   double k_current_v = 0.5;
+   double k_current_v = 0.7;
    double k_planned_dir = 0.3;
-   double k_v_fluctuation = 0.1;
+   double k_v_fluctuation = 0.2;
 }hp;
 
 /*** End of Parameters ***/
@@ -175,7 +175,7 @@ int getHeadingSeq(float direction)
     return heading_seq;
 }
 
-void addHitOnePiece(int seq)
+void correctPieceSeq(int &seq)
 {
     if(seq >= LOOKING_PIECES_SIZE){   // to form a ring
         seq = seq - LOOKING_PIECES_SIZE;
@@ -183,25 +183,23 @@ void addHitOnePiece(int seq)
     else if(seq < 0){
         seq = seq + LOOKING_PIECES_SIZE;
     }
+}
 
+void addHitOnePiece(int seq)
+{
+    //std::cout<<"hit seq = "<<seq<<std::endl;
     _direction_update_buffer(seq)+HEAD_BUFFER_HIT_INCREASE<=1.f ? _direction_update_buffer(seq)+=(float)HEAD_BUFFER_HIT_INCREASE : _direction_update_buffer(seq)=1.f;
 }
 
 void addMissOnePiece(int seq)
 {
-    if(seq >= LOOKING_PIECES_SIZE){ // to form a ring
-        seq = seq - LOOKING_PIECES_SIZE;
-    }
-    else if(seq < 0){
-        seq = seq + LOOKING_PIECES_SIZE;
-    }
-
     float delt_miss = HEAD_BUFFER_MISS_DECREASE_MIN;
     float delt_miss_by_velocity = HEAD_BUFFER_MISS_DECREASE_STANDARD_V * std::max(fabs(v0(0)), fabs(v0(1)));
     if(delt_miss_by_velocity > delt_miss){
         delt_miss = delt_miss_by_velocity;
     }
 
+    //std::cout<<"miss seq = "<<seq<<std::endl;
     _direction_update_buffer(seq)-delt_miss>=0.f ? _direction_update_buffer(seq)-=delt_miss : _direction_update_buffer(seq)=0.f;
 }
 
@@ -214,11 +212,17 @@ void updateHeadBuffer(const int &heading_direction_seq)
     update_flag_buf(heading_direction_seq) = 1; 
 
     for(int i=1; i<=valid_piece_num_one_side; i++){
-        addHitOnePiece(heading_direction_seq + i);
-        addHitOnePiece(heading_direction_seq - i);
+        int seq_this_1 = heading_direction_seq + i;
+        int seq_this_2 = heading_direction_seq - i;
+        
+        correctPieceSeq(seq_this_1);
+        correctPieceSeq(seq_this_2);
 
-        update_flag_buf(heading_direction_seq + i) = 1;
-        update_flag_buf(heading_direction_seq - i) = 1;
+        addHitOnePiece(seq_this_1);
+        addHitOnePiece(seq_this_2);
+
+        update_flag_buf(seq_this_1) = 1;
+        update_flag_buf(seq_this_2) = 1;
     }
     //Add miss for the rest
     for(int j=0; j<LOOKING_PIECES_SIZE; j++){
@@ -266,7 +270,7 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
     sor.filter(*cloud_filtered);
 
     double elp_sample = ros::Time::now().toSec() - _data_input_time.toSec();
-    std::cout << "Map sample time = " << elp_sample << " s" << std::endl;
+    //std::cout << "Map sample time = " << elp_sample << " s" << std::endl;
 
     // transform to world frame
     Eigen::Matrix4f t_c_b = Eigen::Matrix4f::Zero();
@@ -281,7 +285,7 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
     pcl::transformPointCloud(*cloud_1, *cloud_2, transform);
 
     double elp1 = ros::Time::now().toSec() - _data_input_time.toSec();
-    std::cout << "Map transfer time = " << elp1 << " s" << std::endl;
+    //std::cout << "Map transfer time = " << elp1 << " s" << std::endl;
 
     // t_c_b is never needed when used in the real world
     //pcl::transformPointCloud(*cloud_in, *cloud_2, transform);
@@ -345,12 +349,16 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
     rrb.updateDistanceDynamic(cloud_ew, origin);
     //rrb.updateDistance();
 
-    double elp = ros::Time::now().toSec() - _data_input_time.toSec();
-    std::cout << "Map update time = " << elp << " s" << std::endl;
+    //double elp = ros::Time::now().toSec() - _data_input_time.toSec();
+    //std::cout << "Map update time = " << elp << " s" << std::endl;
 
     /* Update buffer for rolling head */
     int heading_direction_seq = getHeadingSeq(motor_yaw);  //current heading direction
+    std::cout << "heading_direction_seq=" << heading_direction_seq << std::endl;
     updateHeadBuffer(heading_direction_seq);
+    double head_up = ros::Time::now().toSec() - _data_input_time.toSec();
+    std::cout << "Head buffer update time = " << head_up << " s" << std::endl;
+
 }
 
 void timerCallback(const ros::TimerEvent& e)
@@ -753,14 +761,21 @@ void positionCallback(const geometry_msgs::PoseStamped& msg)
         p0(1) = -msg.pose.position.x;
         p0(2) = msg.pose.position.z;
 
-        quad.x() = msg.pose.orientation.y;
-        quad.y() = -msg.pose.orientation.x;   
+        quad.x() = msg.pose.orientation.x;
+        quad.y() = msg.pose.orientation.y;   
         quad.z() = msg.pose.orientation.z;
         quad.w() = msg.pose.orientation.w;
 
+        Eigen::Quaternionf q1(0, 0, 0, 1);
+        Eigen::Quaternionf axis = quad * q1 * quad.inverse();
+        axis.w() = cos(-PI_2/2.0);
+        axis.x() = axis.x() * sin(-PI_2/2.0);
+        axis.y() = axis.y() * sin(-PI_2/2.0);
+        axis.z() = axis.z() * sin(-PI_2/2.0);
+        quad = quad * axis;
         /// Update yaw0 here, should be among [-PI, PI] 
-        yaw0 = atan2(2*(quad.w()*quad.z()+quad.x()*quad.y()), 1-2*(quad.z()*quad.z()+quad.y()*quad.y())) - PI_2;
-        if(yaw0 < -PI) yaw0 += PIx2;
+        yaw0 = atan2(2*(quad.w()*quad.z()+quad.x()*quad.y()), 1-2*(quad.z()*quad.z()+quad.y()*quad.y()));// - PI_2;
+        //if(yaw0 < -PI) yaw0 += PIx2;
 
         ROS_INFO("Current yaw = %f", yaw0);
 
@@ -785,9 +800,9 @@ void velocityCallback(const geometry_msgs::TwistStamped& msg)
         if(fabs(v0(0)) > 0.1 || fabs(v0(1)) > 0.1){  //add a dead zone
             v_direction = atan2(v0(1), v0(0));  
         }
-        else{
-            v_direction = 0.0;
-        }
+        // else{
+        //     v_direction = 0.0;
+        // }
 
         ROS_INFO("v_direction(yaw) = %f, v0(0)=%f, v0(1)=%f", v_direction, v0(0), v0(1));
 
@@ -795,19 +810,20 @@ void velocityCallback(const geometry_msgs::TwistStamped& msg)
     }
 }
 
-double init_yaw = 0.0;
+double init_head_yaw = 0.0;
 void motorCallback(const geometry_msgs::Point32& msg)
 {
     static bool init_time = true;
 
     if(init_time)
     {
-        init_yaw = msg.x;
+        init_head_yaw = msg.x;
         init_time = false;
+        ROS_INFO("Head Init Yaw in motor coordinate=%f", init_head_yaw);
     }
     else
     {
-        motor_yaw = -msg.x + init_yaw; // + PI_2?? //start with zero, original z for motor is down. now turn to ENU coordinate. Head forward is PI/2 ???????????
+        motor_yaw = -msg.x + init_head_yaw; // + PI_2?? //start with zero, original z for motor is down. now turn to ENU coordinate. Head forward is PI/2 ???????????
         motor_yaw_rate = -msg.y;
     }
 }
@@ -815,7 +831,7 @@ void motorCallback(const geometry_msgs::Point32& msg)
 void sendMotorCommands(double yaw, double yaw_rate_abs) // Range[-Pi, Pi], [0, 1]
 {
     static geometry_msgs::Point32 head_cmd;
-    head_cmd.x = -yaw + init_yaw;  // + PI_2??  CHG
+    head_cmd.x = -yaw + init_head_yaw;  // + PI_2??  CHG
     head_cmd.y = yaw_rate_abs * 72;
     head_cmd_pub.publish(head_cmd);
 }
@@ -826,7 +842,7 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
 
     // State parameters initiate
-    p_goal << 0.0, 20.0, 1.5;  //x, y, z
+    p_goal << 20.0, 0.0, 1.5;  //x, y, z
     p0 << 0.0, 0.0, 0.0;
     v0 << 0.0, 0.0, 0.0;
     a0 << 0.0, 0.0, 0.0;
@@ -848,7 +864,7 @@ int main(int argc, char** argv)
     heading_resolution =  2.f * PI / (float)LOOKING_PIECES_SIZE;
     mid_seq_num = (int)(LOOKING_PIECES_SIZE / 2 - 1); // start from 0, mid is 8 when LOOKING_PIECES_SIZE is 18
 
-    int valid_piece_num = (int)((float)CAMERA_H_FOV / PI / heading_resolution);
+    int valid_piece_num = (int)((float)CAMERA_H_FOV / 180.f * PI / heading_resolution);
     if(valid_piece_num % 2 == 0)  valid_piece_num -= 1;
     if(valid_piece_num < 1){
         ROS_ERROR("No enough view field with the current camera set!");
