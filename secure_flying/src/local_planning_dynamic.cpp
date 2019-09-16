@@ -51,7 +51,7 @@ static const int N = (1 << POW);
 
 const float cal_duration = 0.05;
 
-ewok::EuclideanDistanceNormalRingBuffer<POW> rrb(resolution, 1.0); //Distance truncation threshold
+ewok::EuclideanDistanceNormalRingBuffer<POW> rrb(resolution, 0.6); //Distance truncation threshold
 
 const int ANGLE_H_NUM = 17;
 const int ANGLE_V_NUM = 7;
@@ -67,8 +67,8 @@ struct  Path_Planning_Parameters
     double d_ref = 1.5;
     double k1_xy = 2; //% Goal directed coefficient
     double k1_z = 2; //% Goal directed coefficient
-    double k2_xy = 4; //% Rotation coefficient
-    double k2_z = 4; //% Rotation coefficient
+    double k2_xy = 3; //% Rotation coefficient
+    double k2_z = 3; //% Rotation coefficient
     double v_max_ori = 1.0; //% m/s, just reference  5.0 originally
     double v_scale_min = 0.1;
     double delt_t = 0.05; //%time interval between two control points
@@ -79,7 +79,7 @@ struct  Head_Planning_Parameters
 {
    double k_current_v = 0.7;
    double k_planned_dir = 0.3;
-   double k_v_fluctuation = 0.2;
+   double k_v_fluctuation = 0.4;
 }hp;
 
 /*** End of Parameters ***/
@@ -236,7 +236,7 @@ void updateHeadBuffer(const int &heading_direction_seq)
 // this callback use input cloud to update ring buffer, and update odometry of UAV
 void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
 {
-    ROS_INFO("Received Point Cloud!");
+   // ROS_INFO("Received Point Cloud!");
     _data_input_time = ros::Time::now();
 
     // Add the rotation of head
@@ -378,7 +378,7 @@ void timerCallback(const ros::TimerEvent& e)
     cloud2.header.stamp = ros::Time::now();
     cloud2.header.frame_id = "world";
     cloud2_pub.publish(cloud2);
-    ROS_INFO("Cloud published!");
+    //ROS_INFO("Cloud published!");
 
     //publish center
     geometry_msgs::PointStamped center_p;
@@ -637,7 +637,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
             }
 
             // Obstacle threshold is 0.9 now
-            flag = rrb.collision_checking(sim_traj, Num, 0.3); // collision_checking
+            flag = rrb.collision_checking(sim_traj, Num, 0.5); // collision_checking
 
             if(flag)
             {
@@ -727,7 +727,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
 
         double coefficient_current_v =  1.0 - _direction_update_buffer(getHeadingSeq(v_direction));
         double coefficient_planned_dir =  1.0 - _direction_update_buffer(getHeadingSeq(theta_h_chosen));
-        ROS_INFO("coefficient_current_v=%lf, coefficient_planned_dir=%lf", coefficient_current_v, coefficient_planned_dir);
+        //ROS_INFO("coefficient_current_v=%lf, coefficient_planned_dir=%lf", coefficient_current_v, coefficient_planned_dir);
 
         double min_head_plan_cost = 10000000.0;
         for(int i=0; i<LOOKING_PIECES_SIZE; i++){
@@ -777,7 +777,7 @@ void positionCallback(const geometry_msgs::PoseStamped& msg)
         yaw0 = atan2(2*(quad.w()*quad.z()+quad.x()*quad.y()), 1-2*(quad.z()*quad.z()+quad.y()*quad.y()));// - PI_2;
         //if(yaw0 < -PI) yaw0 += PIx2;
 
-        ROS_INFO("Current yaw = %f", yaw0);
+        //ROS_INFO("Current yaw = %f", yaw0);
 
         if (!in_safety_mode) {
             p_store = p0;
@@ -785,7 +785,6 @@ void positionCallback(const geometry_msgs::PoseStamped& msg)
         state_updating = false;
     }
 }
-
 
 void velocityCallback(const geometry_msgs::TwistStamped& msg)
 {
@@ -797,7 +796,7 @@ void velocityCallback(const geometry_msgs::TwistStamped& msg)
         v0(0) = msg.twist.linear.y;
         v0(1) = -msg.twist.linear.x;
         v0(2) = msg.twist.linear.z;
-        if(fabs(v0(0)) > 0.1 || fabs(v0(1)) > 0.1){  //add a dead zone
+        if(fabs(v0(0)) > 0.15 || fabs(v0(1)) > 0.15){  //add a dead zone
             v_direction = atan2(v0(1), v0(0));  
         }
         // else{
@@ -805,6 +804,30 @@ void velocityCallback(const geometry_msgs::TwistStamped& msg)
         // }
 
         ROS_INFO("v_direction(yaw) = %f, v0(0)=%f, v0(1)=%f", v_direction, v0(0), v0(1));
+
+	static bool init_v_flag = true;
+	static double last_time, last_vx, last_vy, last_vz;
+	
+	if(init_v_flag){
+		init_v_flag = false;
+	}
+	else{
+		double delt_t = ros::Time::now().toSec() - last_time;
+		a0(0) = (v0(0) - last_vx) / delt_t;
+		a0(1) = (v0(1) - last_vy) / delt_t;
+		a0(2) = (v0(2) - last_vz) / delt_t;
+
+		if(fabs(a0(0)) < 0.1) a0(0) = 0.0;  //dead zone for acc x
+ 		if(fabs(a0(1)) < 0.1) a0(1) = 0.0; //dead zone for acc y
+		if(fabs(a0(2)) < 0.1) a0(2) = 0.0; //dead zone for acc y
+
+		ROS_INFO("acc=(%f, %f, %f)", a0(0), a0(1), a0(2));
+	}
+
+	last_time = ros::Time::now().toSec();
+	last_vx = v0(0);
+	last_vy = v0(1);
+	last_vz = v0(2);
 
         state_updating = false;
     }
@@ -842,7 +865,7 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
 
     // State parameters initiate
-    p_goal << 20.0, 0.0, 1.5;  //x, y, z
+    p_goal << 10.0, 0.0, 1.5;  //x, y, z
     p0 << 0.0, 0.0, 0.0;
     v0 << 0.0, 0.0, 0.0;
     a0 << 0.0, 0.0, 0.0;
@@ -886,7 +909,7 @@ int main(int argc, char** argv)
     head_cmd_pub = nh.advertise<geometry_msgs::Point32>("/gimbal_commands", 2, true); 
 
     ros::Subscriber position_isolate_sub =  nh.subscribe("/mavros/local_position/pose", 1, positionCallback);
-    ros::Subscriber velocity_isolate_sub = nh.subscribe("/mavros/local_position/velocity", 1, velocityCallback);
+    ros::Subscriber velocity_isolate_sub = nh.subscribe("/mavros/local_position/velocity_local", 1, velocityCallback);
 
     ros::Subscriber motor_sub = nh.subscribe("/place_velocity_info", 1, motorCallback);
     ros::Subscriber cloud_sub = nh.subscribe("/camera/depth/color/points", 1, cloudCallback);
