@@ -33,7 +33,7 @@
 #include <../include/Eigen/Eigen>
 #include <algorithm>
 
-#include <px4_autonomy/Position.h> // Publish control points to node 'px4_autonomy'
+#include <mavros_msgs/State.h> 
 
 using namespace message_filters;
 
@@ -96,6 +96,7 @@ ros::Publisher head_cmd_pub; // add on 9 Sept.
 
 double x_centre, y_centre, z_centre;
 
+bool offboard_ready = false;
 bool objects_updated = false;
 bool imu_initilized = false;
 bool state_locked = false;
@@ -810,90 +811,101 @@ void setPointSendCallback(const ros::TimerEvent& e)
     static int emergency_counter = 0;
     static const int emergency_counter_max = stop_time_before_change_direction / SEND_DURATION;
 
-    if(!in_emergency_mode && safe_trajectory_avaliable && !out_of_fence) //Normal control 
+    if(!offboard_ready)
     {
-        // Send the new data if updated, else send the next data in buffer
-        static int buffer_send_counter = 0;
-        if(send_buffer_updated){
-            buffer_send_counter = 0;
-            send_buffer_updated = false;
-        }
-        else{
-            buffer_send_counter ++; 
-            if(buffer_send_counter > send_buffer_size_max){
-                ROS_ERROR("send_counter out of range!! This should not happen! Get to emergency_mode..");
-                in_emergency_mode = true;
-            }
-        }
-
-        trackVelocityPoseNWUtoENU(send_traj_buffer_v[buffer_send_counter](0), send_traj_buffer_v[buffer_send_counter](1), 
-            send_traj_buffer_v[buffer_send_counter](2), 0.f, send_traj_buffer_p[buffer_send_counter](0), 
-            send_traj_buffer_p[buffer_send_counter](1), send_traj_buffer_p[buffer_send_counter](2), yaw_init);
-
-        //fence check, if out of fence, get into emergency stop
-        if(fabs(p0(0)) > 1.f || fabs(p0(1)) > 1.f || fabs(p0(2)) > 1.5f)
+        trackVelocityPoseNWUtoENU(0.f, 0.f, 0.f, 0.f, p0(0), p0(1), p0(2), yaw_init);
+        in_emergency_mode = false;
+        out_of_fence = false;
+    }
+    else
+    {
+        if(!in_emergency_mode && safe_trajectory_avaliable && !out_of_fence) //Normal control 
         {
-            if(fence_cancel_counter > 0){
-                fence_cancel_counter --;
-                ROS_WARN_THROTTLE(2.0,"Out of fence, but fence is canceled!!!!");
+            // Send the new data if updated, else send the next data in buffer
+            static int buffer_send_counter = 0;
+            if(send_buffer_updated){
+                buffer_send_counter = 0;
+                send_buffer_updated = false;
+            }
+            else{
+                buffer_send_counter ++; 
+                if(buffer_send_counter > send_buffer_size_max){
+                    ROS_ERROR("send_counter out of range!! This should not happen! Get to emergency_mode..");
+                    in_emergency_mode = true;
+                }
+            }
+
+            trackVelocityPoseNWUtoENU(send_traj_buffer_v[buffer_send_counter](0), send_traj_buffer_v[buffer_send_counter](1), 
+                send_traj_buffer_v[buffer_send_counter](2), 0.f, send_traj_buffer_p[buffer_send_counter](0), 
+                send_traj_buffer_p[buffer_send_counter](1), send_traj_buffer_p[buffer_send_counter](2), yaw_init);
+
+            //fence check, if out of fence, get into emergency stop
+            if(fabs(p0(0)) > 1.f || fabs(p0(1)) > 1.f || fabs(p0(2)) > 1.5f)
+            {
+                if(fence_cancel_counter > 0){
+                    fence_cancel_counter --;
+                    ROS_WARN_THROTTLE(2.0,"Out of fence, but fence is canceled!!!!");
+                }
+                else
+                {
+                    out_of_fence = true;
+                    ROS_ERROR("Out of fence, get into emergency mode!");
+                }            
+            }
+
+            emergency_stop_init = true; // Update emergency init value for next emergency mode
+            emergency_counter = 0;
+        }
+        else  //emergency mode
+        {
+            in_emergency_mode = true;
+            emergency_stop(emergency_stop_init, p0, v0);
+
+            // Update the send buffer here to a constant stop value for safety in mode changing
+            if(!send_buffer_locked)
+            {
+                send_buffer_locked = true;
+                send_buffer_size = 3;
+               
+                for(int seq=0; seq<send_buffer_size; seq++)
+                {
+                    send_traj_buffer_p[seq](0) = p0(0);
+                    send_traj_buffer_p[seq](1) = p0(1);
+                    send_traj_buffer_p[seq](2) = p0(2);
+
+                    send_traj_buffer_v[seq](0) = 0.f;
+                    send_traj_buffer_v[seq](1) = 0.f;
+                    send_traj_buffer_v[seq](2) = 0.f;
+                }
+
+                send_buffer_updated = true;
+                send_buffer_locked = false;
+            }
+
+            // Change to the opposite direction for next movement
+            if(emergency_counter > emergency_counter_max)
+            {
+                p_goal(0) = -p_goal(0);
+                p_goal(1) = -p_goal(1);
+                out_of_fence = false; // to get out of emergency mode
+                emergency_counter = 0; // if no safe_trajectory_avaliable found the direction will change again later
+                ROS_WARN("*** Global Target Changes to (%f, %f, %f)", p_goal(0), p_goal(1), p_goal(2));
             }
             else
             {
-                out_of_fence = true;
-                ROS_ERROR("Out of fence, get into emergency mode!");
-            }            
-        }
-
-        emergency_stop_init = true; // Update emergency init value for next emergency mode
-        emergency_counter = 0;
-    }
-    else  //emergency mode
-    {
-        in_emergency_mode = true;
-        emergency_stop(emergency_stop_init, p0, v0);
-
-        // Update the send buffer here to a constant stop value for safety in mode changing
-        if(!send_buffer_locked)
-        {
-            send_buffer_locked = true;
-            send_buffer_size = 3;
-           
-            for(int seq=0; seq<send_buffer_size; seq++)
-            {
-                send_traj_buffer_p[seq](0) = p0(0);
-                send_traj_buffer_p[seq](1) = p0(1);
-                send_traj_buffer_p[seq](2) = p0(2);
-
-                send_traj_buffer_v[seq](0) = 0.f;
-                send_traj_buffer_v[seq](1) = 0.f;
-                send_traj_buffer_v[seq](2) = 0.f;
+                emergency_counter ++;
             }
 
-            send_buffer_updated = true;
-            send_buffer_locked = false;
-        }
-
-        // Change to the opposite direction for next movement
-        if(emergency_counter > emergency_counter_max)
-        {
-            p_goal(0) = -p_goal(0);
-            p_goal(1) = -p_goal(1);
-            out_of_fence = false; // to get out of emergency mode
-            emergency_counter = 0; // if no safe_trajectory_avaliable found the direction will change again later
-            ROS_WARN("*** Global Target Changes to (%f, %f, %f)", p_goal(0), p_goal(1), p_goal(2));
-        }
-        else
-        {
-            emergency_counter ++;
-        }
-
-        if(safe_trajectory_avaliable && !out_of_fence)
-        {
-            // get out of emergency mode, have fence_cancel_time seconds of fence invalid time
-            fence_cancel_counter = fence_cancel_time / SEND_DURATION;
-            in_emergency_mode = false; 
+            if(safe_trajectory_avaliable && !out_of_fence)
+            {
+                // get out of emergency mode, have fence_cancel_time seconds of fence invalid time
+                fence_cancel_counter = fence_cancel_time / SEND_DURATION;
+                in_emergency_mode = false; 
+            }
         }
     }
+
+    
 }
 
 void positionCallback(const geometry_msgs::PoseStamped& msg)
@@ -975,6 +987,12 @@ void velocityCallback(const geometry_msgs::TwistStamped& msg)
 
         state_updating = false;
     }
+}
+
+void uavModeCallback(const mavros_msgs::State &msg)
+{
+    if(msg.mode=="OFFBOARD") offboard_ready=true;
+    else offboard_ready=false;
 }
 
 double init_head_yaw = 0.0;
@@ -1114,6 +1132,8 @@ int main(int argc, char** argv)
 
     head_cmd_pub = nh.advertise<geometry_msgs::Point32>("/gimbal_commands", 2, true); 
     cmd_vel_pub = nh.advertise<geometry_msgs::TwistStamped>("/mavros/setpoint_velocity/cmd_vel", 2, true); 
+
+    ros::Subscriber mode_sub = nh.subscribe("/mavros/state", 1, uavModeCallback);
 
     ros::Subscriber position_isolate_sub =  nh.subscribe("/mavros/local_position/pose", 1, positionCallback);
     ros::Subscriber velocity_isolate_sub = nh.subscribe("/mavros/local_position/velocity_local", 1, velocityCallback);
