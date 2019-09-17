@@ -49,7 +49,8 @@ const double resolution = 0.1;
 static const int POW = 6;
 static const int N = (1 << POW);
 
-const float cal_duration = 0.05;
+const float CAL_DURATION = 0.05f; // 20Hz
+const float SEND_DURATION = 0.025f; //40Hz (10HZ at least)
 
 ewok::EuclideanDistanceNormalRingBuffer<POW> rrb(resolution, 0.6); //Distance truncation threshold
 
@@ -57,10 +58,13 @@ const int ANGLE_H_NUM = 17;
 const int ANGLE_V_NUM = 7;
 
 const int LOOKING_PIECES_SIZE = 18; // Should be even, Resolution: 20 degrees one piece. MID=8. Yaw=0. Larger: 9 - 17 :  0 to Pi;  Smaller: 7-0 : 0 to (nearly)-Pi;
-const float CAMERA_H_FOV = 62;  //degrees
-const float HEAD_BUFFER_HIT_INCREASE = 0.4;
-const float HEAD_BUFFER_MISS_DECREASE_STANDARD_V = 0.05; // Miss add value when velocity is 1m/s
-const float HEAD_BUFFER_MISS_DECREASE_MIN = 0.05;
+const float CAMERA_H_FOV = 62.f;  //degrees
+const float HEAD_BUFFER_HIT_INCREASE = 0.4f;
+const float HEAD_BUFFER_MISS_DECREASE_STANDARD_V = 0.05f; // Miss add value when velocity is 1m/s
+const float HEAD_BUFFER_MISS_DECREASE_MIN = 0.05f;
+
+const float stop_time_before_change_direction = 20.f;
+const float fence_cancel_time = 2.f;
 
 struct  Path_Planning_Parameters
 {
@@ -71,7 +75,6 @@ struct  Path_Planning_Parameters
     double k2_z = 3; //% Rotation coefficient
     double v_max_ori = 1.0; //% m/s, just reference  5.0 originally
     double v_scale_min = 0.1;
-    double delt_t = 0.05; //%time interval between two control points
     int max_plan_num = ANGLE_H_NUM * ANGLE_V_NUM;  // Previously it was 100, as 18*7 = 126 > 100
 }pp;
 
@@ -88,8 +91,8 @@ struct  Head_Planning_Parameters
 ros::Publisher current_marker_pub;
 ros::Publisher cloud2_pub, cloud_edf_pub, center_pub;
 
-ros::Publisher traj_point_pub; // add on 9 Mar
-ros::Publisher head_cmd_pub; // add on 9 Mar
+ros::Publisher cmd_vel_pub; // add on 17 Sept.
+ros::Publisher head_cmd_pub; // add on 9 Sept.
 
 double x_centre, y_centre, z_centre;
 
@@ -97,7 +100,9 @@ bool objects_updated = false;
 bool imu_initilized = false;
 bool state_locked = false;
 bool state_updating = false;
-bool in_safety_mode = true;
+bool in_emergency_mode = false;
+bool out_of_fence = false;
+bool safe_trajectory_avaliable = true;
 
 /****** Global variables for path planning ******/
 ros::Time _data_input_time;
@@ -115,6 +120,7 @@ Eigen::Vector3d v0;
 Eigen::Vector3d a0;
 Eigen::Quaternionf quad(1.0, 0.0, 0.0, 0.0);
 double yaw0;
+double yaw0_rate;
 double v_direction;
 //Eigen::VectorXd quad(4); 
 
@@ -123,10 +129,14 @@ double theta_h_last = 0.0;
 double theta_v_last = 0.0;
 
 Eigen::Vector3d p_store;
-double yaw_store = 0.0;
+Eigen::Vector3f *send_traj_buffer_p;
+Eigen::Vector3f *send_traj_buffer_v;
+int send_buffer_size = 0;
+int send_buffer_size_max;
+int send_buffer_locked = false;
+int send_buffer_updated = false;
 
-
-/*** Global variables for rotatin head ***/
+/*** Global variables for rotating head ***/
 Eigen::VectorXf _direction_update_buffer; // Range [0, 1]
 float heading_resolution;
 int valid_piece_num_one_side;
@@ -138,6 +148,9 @@ double motor_yaw_rate = 0.0;
 /** Declaration of functions**/
 
 void sendMotorCommands(double yaw, double yaw_rate_abs);
+
+void trackVelocityPoseNWUtoENU(float vx_sp, float vy_sp, float vz_sp, float yaw_rate_sp, 
+                    float px_sp_last, float py_sp_last, float pz_sp_last, float yaw_sp_last);
 
 /**************************************************/
 
@@ -361,7 +374,7 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
 
 }
 
-void timerCallback(const ros::TimerEvent& e)
+void cloudPubCallback(const ros::TimerEvent& e)
 {
     if(!initialized) return;
 
@@ -557,13 +570,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
 
     if(!state_updating) /// Need to rethink the necessity of this lock!!!! CHG
     {
-        // To do: Update p_goal in accordance with keyboard/joy command
         state_locked = true;
-
-        // TODO: Safety strategy for emergency stop should be added here
-
-        // geometry_msgs::Point traj_pt;
-        px4_autonomy::Position traj_pt;
 
         /** Moition primitives **/
         Eigen::Vector3d delt_p = p_goal - p0;
@@ -615,7 +622,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
         v_scale = (v0.norm() == 0) ? pp.v_scale_min : v_scale;
         double v_max = pp.v_max_ori * v_scale;
 
-        bool flag = false;
+        bool collision_check_pass_flag = false;
 
         theta_h_chosen = theta_h_last; //if the uav is in safe mode, this would be the last value so the head wont rotate
         for(int seq=0; seq<pp.max_plan_num; seq++)
@@ -624,7 +631,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
             Eigen::MatrixXd v;
             Eigen::MatrixXd a;
             Eigen::VectorXd t;
-            motion_primitives(p0, v0, a0, yaw_init, cost(seq,1), cost(seq,2), p_goal, cost(seq,3), v_max, pp.delt_t, p, v, a, t);
+            motion_primitives(p0, v0, a0, yaw_init, cost(seq,1), cost(seq,2), p_goal, cost(seq,3), v_max, SEND_DURATION, p, v, a, t);
 
             // Get points number on the path
             const int Num = p.rows();
@@ -635,18 +642,43 @@ void trajectoryCallback(const ros::TimerEvent& e) {
                 sim_traj[i](1) = (float)p.row(i)(1);
                 sim_traj[i](2) = (float)p.row(i)(2);
             }
+            
+            collision_check_pass_flag = rrb.collision_checking(sim_traj, Num, 0.5); // Obstacle threshold is 0.5 now
 
-            // Obstacle threshold is 0.9 now
-            flag = rrb.collision_checking(sim_traj, Num, 0.5); // collision_checking
-
-            if(flag)
+            if(collision_check_pass_flag)
             {
-                ROS_INFO("traj_safe");
+                //ROS_INFO("traj_safe");
+                safe_trajectory_avaliable = true;
+
                 theta_h_chosen = cost(seq,1); 
                 theta_h_last = cost(seq,1); // Update last theta
                 theta_v_last = cost(seq,2);
 
-                // Publish down sampled path points
+                // Update the buffer to publish when it's not in emergency mode. Consider data lock for multi-thread calculating
+                if(!send_buffer_locked && !in_emergency_mode)
+                {
+                    send_buffer_locked = true;
+
+                    send_buffer_size = p.rows();
+                    if(send_buffer_size > send_buffer_size_max) send_buffer_size = send_buffer_size_max;
+
+                    for(int seq=0; seq<send_buffer_size; seq++)
+                    {
+                        send_traj_buffer_p[seq](0) = (float)p.row(seq)(0);
+                        send_traj_buffer_p[seq](1) = (float)p.row(seq)(1);
+                        send_traj_buffer_p[seq](2) = (float)p.row(seq)(2);
+
+                        send_traj_buffer_v[seq](0) = (float)v.row(seq)(0);
+                        send_traj_buffer_v[seq](1) = (float)v.row(seq)(1);
+                        send_traj_buffer_v[seq](2) = (float)v.row(seq)(2);
+
+                    }
+
+                    send_buffer_updated = true;
+                    send_buffer_locked = false;
+                }
+                
+                //Publish down sampled path points
                 const int point_num_pub = 5;
                 int interval_num = Num / point_num_pub;
                 if (interval_num > 0)
@@ -658,41 +690,24 @@ void trajectoryCallback(const ros::TimerEvent& e) {
                     }
                     show_points.row(point_num_pub) = p.row(Num-1);
                     marker_publish(show_points);
-
-                    // TODO: Publish control values of the UAV in obstacle avoidance mode here, chg
-
                 }
 
                 break;
-            }
-            else
-            {
-                // ROS_INFO("traj_unsafe");
+            }else{
+                // ROS_INFO("traj_unsafe in this direction, check another!");
             }
         }
 
-        if(!flag){  // Safety mode
+        if(!collision_check_pass_flag){  // Safety mode
             ROS_WARN("No valid trajectory found! Trapped in safety mode!");
-            in_safety_mode = true;
-
-            //emergency stop?      4th July
-            p_store = p0;
-            yaw_store = yaw0;
-
-            traj_pt.x = p_store(0);
-            traj_pt.y = p_store(1);
-            traj_pt.z = p_store(2);
-            traj_pt.yaw = yaw_store;
-
-            // TODO: Change the control values in safety mode here, chg
-
-            for (int i = 0; i < 3; ++i) {
-                traj_pt.header.stamp = ros::Time::now();
-                traj_point_pub.publish(traj_pt);  
-            }
-
+            safe_trajectory_avaliable = false;
+            
+            // Publish points of stored point to show
             Eigen::MatrixXd show_points = Eigen::MatrixXd::Zero(6, 3);
-            for(int pubi = 0; pubi < 6; pubi++)
+            show_points(0, 0) = p0(0);
+            show_points(0, 1) = p0(1);
+            show_points(0, 2) = p0(2);
+            for(int pubi = 1; pubi < 5; pubi++)
             {
                 show_points(pubi, 0) = p_store(0);
                 show_points(pubi, 1) = p_store(1);
@@ -702,7 +717,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
         }
 
         double algo_time = ros::Time::now().toSec() - _algorithm_time.toSec();
-        ROS_INFO("algorithm time is: %lf", algo_time);
+        ROS_INFO_THROTTLE(4.0, "algorithm time is: %lf", algo_time);
         _algorithm_time = ros::Time::now();
 
         /// TODO: Publish the control values, chg
@@ -749,6 +764,137 @@ void trajectoryCallback(const ros::TimerEvent& e) {
     }
 }
 
+void emergency_stop(bool &init, Eigen::Vector3d p0_local, Eigen::Vector3d v0_local)
+{
+    static float emergency_acc_xy = 5.f;
+    static float emergency_acc_z = 5.f;
+    static float time_interval = SEND_DURATION;
+    static float sp_vx, sp_vy, sp_vz;
+    static Eigen::Vector3d start_pose(0.0, 0.0, 0.0);
+    static Eigen::Vector3d start_vel(0.0, 0.0, 0.0);
+
+    if(init)
+    {
+        init = false;
+        start_pose = p0_local;
+        start_vel = v0_local;
+        sp_vx = v0_local(0);
+        sp_vy = v0_local(1);
+        sp_vz = v0_local(2);
+        trackVelocityPoseNWUtoENU(sp_vx, sp_vy, sp_vz, 0.f, start_pose(0), start_pose(1), start_pose(2), yaw_init);
+    }
+    else
+    {
+        if(fabs(v0_local(0)) < 0.00001) v0_local(0) = 0.00001;
+        if(fabs(v0_local(1)) < 0.00001) v0_local(1) = 0.00001;
+        if(fabs(v0_local(2)) < 0.00001) v0_local(2) = 0.00001;
+
+        float delt_vx = -v0_local(0) / fabs(v0_local(0)) * emergency_acc_xy * time_interval;
+        float delt_vy = -v0_local(1) / fabs(v0_local(1)) * emergency_acc_xy * time_interval;
+        float delt_vz = -v0_local(2) / fabs(v0_local(2)) * emergency_acc_z * time_interval;
+
+        fabs(sp_vx + delt_vx) <  fabs(2*delt_vx) ? sp_vx = 0.f : sp_vx += delt_vx;
+        fabs(sp_vy + delt_vy) <  fabs(2*delt_vy) ? sp_vy = 0.f : sp_vy += delt_vy;
+        fabs(sp_vz + delt_vz) <  fabs(2*delt_vz) ? sp_vz = 0.f : sp_vz += delt_vz;
+
+        ROS_WARN_THROTTLE(3.0,"Emergency Mode! sp_vx=%f, sp_vy=%f", sp_vx, sp_vy);
+
+        trackVelocityPoseNWUtoENU(sp_vx, sp_vy, sp_vz, 0.f, start_pose(0), start_pose(1), start_pose(2), yaw_init);
+    }
+}
+
+void setPointSendCallback(const ros::TimerEvent& e)
+{
+    static bool emergency_stop_init = true;
+    static int fence_cancel_counter = 0;
+    static int emergency_counter = 0;
+    static const int emergency_counter_max = stop_time_before_change_direction / SEND_DURATION;
+
+    if(!in_emergency_mode && safe_trajectory_avaliable && !out_of_fence) //Normal control 
+    {
+        // Send the new data if updated, else send the next data in buffer
+        static int buffer_send_counter = 0;
+        if(send_buffer_updated){
+            buffer_send_counter = 0;
+            send_buffer_updated = false;
+        }
+        else{
+            buffer_send_counter ++; 
+            if(buffer_send_counter > send_buffer_size_max){
+                ROS_ERROR("send_counter out of range!! This should not happen! Get to emergency_mode..");
+                in_emergency_mode = true;
+            }
+        }
+
+        trackVelocityPoseNWUtoENU(send_traj_buffer_v[buffer_send_counter](0), send_traj_buffer_v[buffer_send_counter](1), 
+            send_traj_buffer_v[buffer_send_counter](2), 0.f, send_traj_buffer_p[buffer_send_counter](0), 
+            send_traj_buffer_p[buffer_send_counter](1), send_traj_buffer_p[buffer_send_counter](2), yaw_init);
+
+        //fence check, if out of fence, get into emergency stop
+        if(fabs(p0(0)) > 1.f || fabs(p0(1)) > 1.f || fabs(p0(2)) > 1.5f)
+        {
+            if(fence_cancel_counter > 0){
+                fence_cancel_counter --;
+                ROS_WARN_THROTTLE(2.0,"Out of fence, but fence is canceled!!!!");
+            }
+            else
+            {
+                out_of_fence = true;
+                ROS_ERROR("Out of fence, get into emergency mode!");
+            }            
+        }
+
+        emergency_stop_init = true; // Update emergency init value for next emergency mode
+        emergency_counter = 0;
+    }
+    else  //emergency mode
+    {
+        in_emergency_mode = true;
+        emergency_stop(emergency_stop_init, p0, v0);
+
+        // Update the send buffer here to a constant stop value for safety in mode changing
+        if(!send_buffer_locked)
+        {
+            send_buffer_locked = true;
+            send_buffer_size = 3;
+           
+            for(int seq=0; seq<send_buffer_size; seq++)
+            {
+                send_traj_buffer_p[seq](0) = p0(0);
+                send_traj_buffer_p[seq](1) = p0(1);
+                send_traj_buffer_p[seq](2) = p0(2);
+
+                send_traj_buffer_v[seq](0) = 0.f;
+                send_traj_buffer_v[seq](1) = 0.f;
+                send_traj_buffer_v[seq](2) = 0.f;
+            }
+
+            send_buffer_updated = true;
+            send_buffer_locked = false;
+        }
+
+        // Change to the opposite direction for next movement
+        if(emergency_counter > emergency_counter_max)
+        {
+            p_goal(0) = -p_goal(0);
+            p_goal(1) = -p_goal(1);
+            out_of_fence = false; // to get out of emergency mode
+            emergency_counter = 0; // if no safe_trajectory_avaliable found the direction will change again later
+            ROS_WARN("*** Global Target Changes to (%f, %f, %f)", p_goal(0), p_goal(1), p_goal(2));
+        }
+        else
+        {
+            emergency_counter ++;
+        }
+
+        if(safe_trajectory_avaliable && !out_of_fence)
+        {
+            // get out of emergency mode, have fence_cancel_time seconds of fence invalid time
+            fence_cancel_counter = fence_cancel_time / SEND_DURATION;
+            in_emergency_mode = false; 
+        }
+    }
+}
 
 void positionCallback(const geometry_msgs::PoseStamped& msg)
 {
@@ -774,13 +920,12 @@ void positionCallback(const geometry_msgs::PoseStamped& msg)
         axis.z() = axis.z() * sin(-PI_2/2.0);
         quad = quad * axis;
         /// Update yaw0 here, should be among [-PI, PI] 
-        yaw0 = atan2(2*(quad.w()*quad.z()+quad.x()*quad.y()), 1-2*(quad.z()*quad.z()+quad.y()*quad.y()));// - PI_2;
-        //if(yaw0 < -PI) yaw0 += PIx2;
+        yaw0 = atan2(2*(quad.w()*quad.z()+quad.x()*quad.y()), 1-2*(quad.z()*quad.z()+quad.y()*quad.y()));
 
         //ROS_INFO("Current yaw = %f", yaw0);
 
-        if (!in_safety_mode) {
-            p_store = p0;
+        if (safe_trajectory_avaliable) {
+            p_store = p0; //just used to show points, emergency mode will record its own start point
         }
         state_updating = false;
     }
@@ -796,38 +941,37 @@ void velocityCallback(const geometry_msgs::TwistStamped& msg)
         v0(0) = msg.twist.linear.y;
         v0(1) = -msg.twist.linear.x;
         v0(2) = msg.twist.linear.z;
+        yaw0_rate = msg.twist.angular.z;
+
         if(fabs(v0(0)) > 0.15 || fabs(v0(1)) > 0.15){  //add a dead zone
             v_direction = atan2(v0(1), v0(0));  
         }
-        // else{
-        //     v_direction = 0.0;
-        // }
+        //ROS_INFO("v_direction(yaw) = %f, v0(0)=%f, v0(1)=%f", v_direction, v0(0), v0(1));
 
-        ROS_INFO("v_direction(yaw) = %f, v0(0)=%f, v0(1)=%f", v_direction, v0(0), v0(1));
+    	/** Calculate virtual accelerates from velocity. Original accelerates given by px4 is too noisy **/
+        static bool init_v_flag = true;
+    	static double last_time, last_vx, last_vy, last_vz;
+    	
+    	if(init_v_flag){
+    		init_v_flag = false;
+    	}
+    	else{
+    		double delt_t = ros::Time::now().toSec() - last_time;
+    		a0(0) = (v0(0) - last_vx) / delt_t;
+    		a0(1) = (v0(1) - last_vy) / delt_t;
+    		a0(2) = (v0(2) - last_vz) / delt_t;
 
-	static bool init_v_flag = true;
-	static double last_time, last_vx, last_vy, last_vz;
-	
-	if(init_v_flag){
-		init_v_flag = false;
-	}
-	else{
-		double delt_t = ros::Time::now().toSec() - last_time;
-		a0(0) = (v0(0) - last_vx) / delt_t;
-		a0(1) = (v0(1) - last_vy) / delt_t;
-		a0(2) = (v0(2) - last_vz) / delt_t;
+    		if(fabs(a0(0)) < 0.1) a0(0) = 0.0;  //dead zone for acc x
+     		if(fabs(a0(1)) < 0.1) a0(1) = 0.0; //dead zone for acc y
+    		if(fabs(a0(2)) < 0.1) a0(2) = 0.0; //dead zone for acc y
 
-		if(fabs(a0(0)) < 0.1) a0(0) = 0.0;  //dead zone for acc x
- 		if(fabs(a0(1)) < 0.1) a0(1) = 0.0; //dead zone for acc y
-		if(fabs(a0(2)) < 0.1) a0(2) = 0.0; //dead zone for acc y
+    		//ROS_INFO("acc=(%f, %f, %f)", a0(0), a0(1), a0(2));
+    	}
 
-		ROS_INFO("acc=(%f, %f, %f)", a0(0), a0(1), a0(2));
-	}
-
-	last_time = ros::Time::now().toSec();
-	last_vx = v0(0);
-	last_vy = v0(1);
-	last_vz = v0(2);
+    	last_time = ros::Time::now().toSec();
+    	last_vx = v0(0);
+    	last_vy = v0(1);
+    	last_vz = v0(2);
 
         state_updating = false;
     }
@@ -858,6 +1002,65 @@ void sendMotorCommands(double yaw, double yaw_rate_abs) // Range[-Pi, Pi], [0, 1
     head_cmd.y = yaw_rate_abs * 72;
     head_cmd_pub.publish(head_cmd);
 }
+
+void limit_to_max(float &x, float x_max)
+{
+    if(fabs(x) > fabs(x_max))
+    {
+        x = x / fabs(x) * fabs(x_max);
+    }
+}
+
+void trackVelocityPoseNWUtoENU(float vx_sp, float vy_sp, float vz_sp, float yaw_rate_sp, 
+                    float px_sp_last, float py_sp_last, float pz_sp_last, float yaw_sp_last)
+{
+    geometry_msgs::TwistStamped cmd_to_pub;
+    /*Simple tracker*/
+    static float kp_xy = 0.11;
+    static float kp_z = 0.15;
+    static float kp_yaw = 0.05;
+    static float p_2_delt_v_max_xy = 0.5;
+    static float p_2_delt_v_max_z = 0.4;
+    static float max_v_xy = 3.0;
+    static float max_v_z = 1.0;
+    static float max_yaw_rate = 1.0;
+
+    float time_interval = SEND_DURATION;
+    // NOTE: The updating frequency of position is not equal to CONTROL_RATE. It is just a reference time.
+    float delt_px_to_vx = (px_sp_last - p0(0)) / time_interval * kp_xy; 
+    float delt_py_to_vy = (py_sp_last - p0(1)) / time_interval * kp_xy;
+    float delt_pz_to_vz = (pz_sp_last - p0(2)) / time_interval * kp_z;
+
+    limit_to_max(delt_px_to_vx, p_2_delt_v_max_xy);
+    limit_to_max(delt_py_to_vy, p_2_delt_v_max_xy);
+    limit_to_max(delt_pz_to_vz, p_2_delt_v_max_z);
+
+    vx_sp += delt_px_to_vx;
+    vy_sp += delt_py_to_vy;
+    vz_sp += delt_pz_to_vz;
+    yaw_rate_sp += (yaw_sp_last - yaw0) / time_interval * kp_yaw;
+
+    if(fabs(vz_sp < 0.05)) vz_sp = 0.f;  //dead zone for vz
+    if(fabs(yaw_rate_sp < 0.1)) yaw_rate_sp = 0.f;  //dead zone for yaw_rate
+
+    limit_to_max(vx_sp, max_v_xy);
+    limit_to_max(vy_sp, max_v_xy);
+    limit_to_max(vz_sp, max_v_z);
+    limit_to_max(yaw_rate_sp, max_yaw_rate);
+
+    /*Publish NWU to ENU*/
+    cmd_to_pub.header.stamp = ros::Time::now();
+    cmd_to_pub.twist.linear.x = -vy_sp;
+    cmd_to_pub.twist.linear.y = vx_sp;
+    cmd_to_pub.twist.linear.z = vz_sp;
+    cmd_to_pub.twist.angular.z = yaw_rate_sp;
+    cmd_vel_pub.publish(cmd_to_pub);
+
+    // ROS_INFO("p(0)=%f,p(1)=%f,p(2)=%f,yaw=%f", p0(0),p0(1),p0(2),yaw0);
+    // ROS_INFO("v(0)=%f,v(1)=%f,v(2)=%f,yaw_rate=%f", v0(0),v0(1),v0(2),yaw0_rate);
+    // ROS_INFO("vx_sp=%f,vy_sp=%f,vz_sp=%f,yaw_rate_sp=%f", vx_sp, vy_sp, vz_sp, yaw_rate_sp);
+}
+
 
 int main(int argc, char** argv)
 {
@@ -897,6 +1100,10 @@ int main(int argc, char** argv)
 
     ROS_INFO("Heading resolution = %f (rad), Fov = %f, valid_piece_num = %d", heading_resolution, CAMERA_H_FOV, valid_piece_num);
 
+    send_buffer_size_max = 1.f / SEND_DURATION;
+    const int const_send_buffer_size_max = send_buffer_size_max;
+    send_traj_buffer_p = new Eigen::Vector3f[const_send_buffer_size_max];
+    send_traj_buffer_v = new Eigen::Vector3f[const_send_buffer_size_max];
 
     // ringbuffer cloud2
     cloud2_pub = nh.advertise<sensor_msgs::PointCloud2>("/ring_buffer/cloud_ob", 1, true);
@@ -905,8 +1112,8 @@ int main(int argc, char** argv)
     center_pub = nh.advertise<geometry_msgs::PointStamped>("/ring_buffer/center",1,true) ;
     current_marker_pub = nh.advertise<visualization_msgs::Marker>("/visualization_marker", 1);
 
-    traj_point_pub = nh.advertise<px4_autonomy::Position>("/px4/cmd_pose", 5, true); // add on 9 Mar
     head_cmd_pub = nh.advertise<geometry_msgs::Point32>("/gimbal_commands", 2, true); 
+    cmd_vel_pub = nh.advertise<geometry_msgs::TwistStamped>("/mavros/setpoint_velocity/cmd_vel", 2, true); 
 
     ros::Subscriber position_isolate_sub =  nh.subscribe("/mavros/local_position/pose", 1, positionCallback);
     ros::Subscriber velocity_isolate_sub = nh.subscribe("/mavros/local_position/velocity_local", 1, velocityCallback);
@@ -915,15 +1122,18 @@ int main(int argc, char** argv)
     ros::Subscriber cloud_sub = nh.subscribe("/camera/depth/color/points", 1, cloudCallback);
 
     // timer for publish ringbuffer as pointcloud
-    ros::Timer timer1 = nh.createTimer(ros::Duration(0.2), timerCallback); // RATE 5 Hz to publish
+    ros::Timer timer1 = nh.createTimer(ros::Duration(0.2), cloudPubCallback); // RATE 5 Hz to publish
 
     // timer for trajectory generation
-    ros::Timer timer2 = nh.createTimer(ros::Duration(cal_duration), trajectoryCallback);
+    ros::Timer timer2 = nh.createTimer(ros::Duration(CAL_DURATION), trajectoryCallback);
+
+    // timer for control points send
+    ros::Timer timer3 = nh.createTimer(ros::Duration(SEND_DURATION), setPointSendCallback);
 
     std::cout << "Start mapping!" << std::endl;
 
     // ros::spin();
-    ros::AsyncSpinner spinner(2); // Use 2 threads
+    ros::AsyncSpinner spinner(3); // Use 2 threads
     spinner.start();
     ros::waitForShutdown();
 
