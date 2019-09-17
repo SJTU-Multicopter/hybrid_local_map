@@ -63,6 +63,8 @@ const float HEAD_BUFFER_HIT_INCREASE = 0.4f;
 const float HEAD_BUFFER_MISS_DECREASE_STANDARD_V = 0.05f; // Miss add value when velocity is 1m/s
 const float HEAD_BUFFER_MISS_DECREASE_MIN = 0.05f;
 
+const float MAX_V = 2.5f;
+
 const float stop_time_before_change_direction = 20.f;
 const float fence_cancel_time = 2.f;
 
@@ -70,9 +72,9 @@ struct  Path_Planning_Parameters
 {
     double d_ref = 1.5;
     double k1_xy = 2; //% Goal directed coefficient
-    double k1_z = 2; //% Goal directed coefficient
+    double k1_z = 2.5; //% Goal directed coefficient
     double k2_xy = 3; //% Rotation coefficient
-    double k2_z = 3; //% Rotation coefficient
+    double k2_z = 3.5; //% Rotation coefficient
     double v_max_ori = 1.0; //% m/s, just reference  5.0 originally
     double v_scale_min = 0.1;
     int max_plan_num = ANGLE_H_NUM * ANGLE_V_NUM;  // Previously it was 100, as 18*7 = 126 > 100
@@ -82,7 +84,7 @@ struct  Head_Planning_Parameters
 {
    double k_current_v = 0.7;
    double k_planned_dir = 0.3;
-   double k_v_fluctuation = 0.4;
+   double k_v_fluctuation = 0.3;
 }hp;
 
 /*** End of Parameters ***/
@@ -469,7 +471,7 @@ void motion_primitives(Eigen::Vector3d p0, Eigen::Vector3d v0, Eigen::Vector3d a
 
     double j_limit = 4;
     double a_limit = 3;
-    double v_limit = 3;
+    double v_limit = MAX_V;
 
     double T1 = fabs(af(0)-a0(0))/j_limit > fabs(af(1)-a0(1))/j_limit ? fabs(af(0)-a0(0))/j_limit : fabs(af(1)-a0(1))/j_limit;
     T1 = T1 > fabs(af(2)-a0(2))/j_limit ? T1 : fabs(af(2)-a0(2))/j_limit;
@@ -721,8 +723,6 @@ void trajectoryCallback(const ros::TimerEvent& e) {
         ROS_INFO_THROTTLE(4.0, "algorithm time is: %lf", algo_time);
         _algorithm_time = ros::Time::now();
 
-        /// TODO: Publish the control values, chg
-
         state_locked = false;
     }
 
@@ -840,7 +840,7 @@ void setPointSendCallback(const ros::TimerEvent& e)
                 send_traj_buffer_p[buffer_send_counter](1), send_traj_buffer_p[buffer_send_counter](2), yaw_init);
 
             //fence check, if out of fence, get into emergency stop
-            if(fabs(p0(0)) > 1.f || fabs(p0(1)) > 1.f || fabs(p0(2)) > 1.5f)
+            if(fabs(p0(0)) > 1.3f || fabs(p0(1)) > 1.3f || fabs(p0(2)) > 1.2f)
             {
                 if(fence_cancel_counter > 0){
                     fence_cancel_counter --;
@@ -852,7 +852,6 @@ void setPointSendCallback(const ros::TimerEvent& e)
                     ROS_ERROR("Out of fence, get into emergency mode!");
                 }            
             }
-
             emergency_stop_init = true; // Update emergency init value for next emergency mode
             emergency_counter = 0;
         }
@@ -975,7 +974,7 @@ void velocityCallback(const geometry_msgs::TwistStamped& msg)
 
     		if(fabs(a0(0)) < 0.1) a0(0) = 0.0;  //dead zone for acc x
      		if(fabs(a0(1)) < 0.1) a0(1) = 0.0; //dead zone for acc y
-    		if(fabs(a0(2)) < 0.1) a0(2) = 0.0; //dead zone for acc y
+    		if(fabs(a0(2)) < 0.5) a0(2) = 0.0; //dead zone for acc z
 
     		//ROS_INFO("acc=(%f, %f, %f)", a0(0), a0(1), a0(2));
     	}
@@ -1034,13 +1033,13 @@ void trackVelocityPoseNWUtoENU(float vx_sp, float vy_sp, float vz_sp, float yaw_
 {
     geometry_msgs::TwistStamped cmd_to_pub;
     /*Simple tracker*/
-    static float kp_xy = 0.11;
-    static float kp_z = 0.15;
+    static float kp_xy = 0.1;
+    static float kp_z = 0.1;
     static float kp_yaw = 0.05;
     static float p_2_delt_v_max_xy = 0.5;
     static float p_2_delt_v_max_z = 0.4;
-    static float max_v_xy = 3.0;
-    static float max_v_z = 1.0;
+    static float max_v_xy = MAX_V;
+    static float max_v_z = MAX_V;
     static float max_yaw_rate = 1.0;
 
     float time_interval = SEND_DURATION;
@@ -1086,7 +1085,7 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
 
     // State parameters initiate
-    p_goal << 10.0, 0.0, 1.5;  //x, y, z
+    p_goal << 0.0, 10.0, 0.7;  //x, y, z
     p0 << 0.0, 0.0, 0.0;
     v0 << 0.0, 0.0, 0.0;
     a0 << 0.0, 0.0, 0.0;
