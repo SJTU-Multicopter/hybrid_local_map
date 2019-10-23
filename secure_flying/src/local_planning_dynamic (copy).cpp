@@ -49,7 +49,7 @@ const double resolution = 0.1;
 static const int POW = 6;
 static const int N = (1 << POW);
 
-const float CAL_DURATION = 0.050f; // 20Hz
+const float CAL_DURATION = 0.05f; // 20Hz
 const float SEND_DURATION = 0.025f; //40Hz (10HZ at least)
 
 ewok::EuclideanDistanceNormalRingBuffer<POW> rrb(resolution, 0.6); //Distance truncation threshold
@@ -63,10 +63,10 @@ const float HEAD_BUFFER_HIT_INCREASE = 0.4f;
 const float HEAD_BUFFER_MISS_DECREASE_STANDARD_V = 0.05f; // Miss add value when velocity is 1m/s
 const float HEAD_BUFFER_MISS_DECREASE_MIN = 0.05f;
 
-const float MAX_V = 2.0f;
+const float MAX_V = 3.f;
 
-const float stop_time_before_change_direction = 10.f;
-const float fence_cancel_time = 3.f;
+const float stop_time_before_change_direction = 20.f;
+const float fence_cancel_time = 2.f;
 
 struct  Path_Planning_Parameters
 {
@@ -80,7 +80,6 @@ struct  Path_Planning_Parameters
     int max_plan_num = ANGLE_H_NUM * ANGLE_V_NUM;  // Previously it was 100, as 18*7 = 126 > 100
 }pp;
 
-
 struct  Head_Planning_Parameters
 {
    double k_current_v = 0.7;
@@ -91,7 +90,7 @@ struct  Head_Planning_Parameters
 /*** End of Parameters ***/
 
 /** Basic global variables **/
-ros::Publisher current_marker_pub, path_pub;
+ros::Publisher current_marker_pub;
 ros::Publisher cloud2_pub, cloud_edf_pub, center_pub;
 
 ros::Publisher cmd_vel_pub; // add on 17 Sept.
@@ -565,38 +564,6 @@ void marker_publish(Eigen::MatrixXd &Points)
     current_marker_pub.publish(line_strip);
 }
 
-/* Publish markers to show the path in rviz */
-void path_publish(Eigen::Vector3d &Point)
-{
-    static int id = 0;
-    visualization_msgs::Marker point;
-    point.header.frame_id = "world";
-    point.header.stamp = ros::Time::now();
-    point.action = visualization_msgs::Marker::ADD;
-    point.ns = "path";
-
-    point.id = id;
-    id ++;
-    if(id>100000) id=0;
-
-    point.type = visualization_msgs::Marker::POINTS;
-
-    point.pose.position.x = Point(0);
-    point.pose.position.y = Point(1);
-    point.pose.position.z = Point(2);
-
-    point.scale.x = 0.02;
-    point.scale.y = 0.02;
-
-    // Points are green
-    point.color.r = 1.0;
-    point.color.g = 0.8;
-    point.color.b = 0.78;
-    point.color.a = 1.0;
-
-    path_pub.publish(point);
-}
-
 
 
 /** This is the function to generate the collision-free path, which is trigered by a timer defined in main function. **/
@@ -842,25 +809,15 @@ void setPointSendCallback(const ros::TimerEvent& e)
     static int emergency_counter = 0;
     static const int emergency_counter_max = stop_time_before_change_direction / SEND_DURATION;
     static const int emergency_counter_reinit_start = 2.f / SEND_DURATION;
-    static bool if_last_offboard = false;
+
     if(!offboard_ready)
     {
         trackVelocityPoseNWUtoENU(0.f, 0.f, 0.f, 0.f, p0(0), p0(1), p0(2), yaw_init);
         in_emergency_mode = false;
         out_of_fence = false;
-	emergency_counter = emergency_counter_max; //add to test manual fight direction change
-		
-	if(if_last_offboard)
-	{
-	    p_goal(0) = -p_goal(0);
-            p_goal(1) = -p_goal(1);
-	}
-	if_last_offboard = false;
     }
     else
     {
-	if_last_offboard = true;
-
         if(!in_emergency_mode && safe_trajectory_avaliable && !out_of_fence) //Normal control 
         {
             // Send the new data if updated, else send the next data in buffer
@@ -882,7 +839,7 @@ void setPointSendCallback(const ros::TimerEvent& e)
                 send_traj_buffer_p[buffer_send_counter](1), send_traj_buffer_p[buffer_send_counter](2), yaw_init);
 
             //fence check, if out of fence, get into emergency stop
-            if(fabs(p0(0)) > 3.f || fabs(p0(1)) > 3.f || fabs(p0(2)) > 2.0f) //very large, never use here
+            if(fabs(p0(0)) > 1.3f || fabs(p0(1)) > 1.3f || fabs(p0(2)) > 1.2f)
             {
                 if(fence_cancel_counter > 0){
                     fence_cancel_counter --;
@@ -970,8 +927,6 @@ void positionCallback(const geometry_msgs::PoseStamped& msg)
         p0(1) = -msg.pose.position.x;
         p0(2) = msg.pose.position.z;
 
-	path_publish(p0);
-
         quad.x() = msg.pose.orientation.x;
         quad.y() = msg.pose.orientation.y;   
         quad.z() = msg.pose.orientation.z;
@@ -1008,14 +963,10 @@ void velocityCallback(const geometry_msgs::TwistStamped& msg)
         v0(2) = msg.twist.linear.z;
         yaw0_rate = msg.twist.angular.z;
 
-        if(fabs(v0(0)) > 0.15 || fabs(v0(1)) > 0.15){  //add a dead zone for v direction used in rolling head
+        if(fabs(v0(0)) > 0.15 || fabs(v0(1)) > 0.15){  //add a dead zone
             v_direction = atan2(v0(1), v0(0));  
         }
         //ROS_INFO("v_direction(yaw) = %f, v0(0)=%f, v0(1)=%f", v_direction, v0(0), v0(1));
-
-	if(fabs(v0(0)) < 0.05) v0(0) = 0.0;  //add a dead zone for v0 used in motion primatives
-	if(fabs(v0(1)) < 0.05) v0(1) = 0.0;  //add a dead zone for v0 used in motion primatives
-	if(fabs(v0(2)) < 0.05) v0(2) = 0.0;  //add a dead zone for v0 used in motion primatives
 
     	/** Calculate virtual accelerates from velocity. Original accelerates given by px4 is too noisy **/
         static bool init_v_flag = true;
@@ -1030,9 +981,9 @@ void velocityCallback(const geometry_msgs::TwistStamped& msg)
     		a0(1) = (v0(1) - last_vy) / delt_t;
     		a0(2) = (v0(2) - last_vz) / delt_t;
 
-    		if(fabs(a0(0)) < 1.0) a0(0) = 0.0;  //dead zone for acc x
-     		if(fabs(a0(1)) < 1.0) a0(1) = 0.0; //dead zone for acc y
-    		if(fabs(a0(2)) < 1.0) a0(2) = 0.0; //dead zone for acc z
+    		if(fabs(a0(0)) < 0.1) a0(0) = 0.0;  //dead zone for acc x
+     		if(fabs(a0(1)) < 0.1) a0(1) = 0.0; //dead zone for acc y
+    		if(fabs(a0(2)) < 0.5) a0(2) = 0.0; //dead zone for acc z
 
     		//ROS_INFO("acc=(%f, %f, %f)", a0(0), a0(1), a0(2));
     	}
@@ -1136,13 +1087,14 @@ void trackVelocityPoseNWUtoENU(float vx_sp, float vy_sp, float vz_sp, float yaw_
     // ROS_INFO("vx_sp=%f,vy_sp=%f,vz_sp=%f,yaw_rate_sp=%f", vx_sp, vy_sp, vz_sp, yaw_rate_sp);
 }
 
+
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "local_planning");
     ros::NodeHandle nh;
 
     // State parameters initiate
-    p_goal << 0.0, -8.0, 0.7;  //x, y, z
+    p_goal << 0.0, 10.0, 0.7;  //x, y, z
     p0 << 0.0, 0.0, 0.0;
     v0 << 0.0, 0.0, 0.0;
     a0 << 0.0, 0.0, 0.0;
@@ -1185,7 +1137,6 @@ int main(int argc, char** argv)
 
     center_pub = nh.advertise<geometry_msgs::PointStamped>("/ring_buffer/center",1,true) ;
     current_marker_pub = nh.advertise<visualization_msgs::Marker>("/visualization_marker", 1);
-    path_pub = nh.advertise<visualization_msgs::Marker>("/path", 1);
 
     head_cmd_pub = nh.advertise<geometry_msgs::Point32>("/gimbal_commands", 2, true); 
     cmd_vel_pub = nh.advertise<geometry_msgs::TwistStamped>("/mavros/setpoint_velocity/cmd_vel", 2, true); 
