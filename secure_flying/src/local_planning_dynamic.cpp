@@ -11,27 +11,23 @@
 #include <message_filters/time_synchronizer.h>
 
 #include <geometry_msgs/PoseStamped.h>
-#include <geometry_msgs/Twist.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/Point32.h>
-
-#include <nav_msgs/Odometry.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <sensor_msgs/Imu.h>
 #include <std_msgs/Float64MultiArray.h>
+#include <sensor_msgs/PointCloud2.h>
 #include <visualization_msgs/Marker.h>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <pcl/io/pcd_io.h>
 #include <iostream>
 #include <string>
-#include <fstream>
 #include <cmath>
-#include <../include/Eigen/Eigen>
 #include <algorithm>
+#include <tf/transform_broadcaster.h>
+#include <hist_kalman_mot/ObjectInTracking.h>
+#include <hist_kalman_mot/ObjectsInTracking.h>
 
 #include <mavros_msgs/State.h> 
 
@@ -42,7 +38,6 @@ using namespace message_filters;
 #define PI 3.14159
 #define PI_2 1.5708
 
-
 /**** Parameters to tune, some initialization needs to be changed in main function ****/
 const double resolution = 0.1;
 
@@ -52,7 +47,7 @@ static const int N = (1 << POW);
 const float CAL_DURATION = 0.050f; // 20Hz
 const float SEND_DURATION = 0.025f; //40Hz (10HZ at least)
 
-ewok::EuclideanDistanceNormalRingBuffer<POW> rrb(resolution, 0.6); //Distance truncation threshold
+ewok::EuclideanDistanceNormalRingBuffer<POW> rrb(resolution, 0.5); //Distance truncation threshold
 
 const int ANGLE_H_NUM = 17;
 const int ANGLE_V_NUM = 7;
@@ -70,7 +65,7 @@ const float fence_cancel_time = 3.f;
 
 struct  Path_Planning_Parameters
 {
-    double d_ref = 1.5;
+    double d_ref = 0.5;  //NOTE: NEED TO CHANGE CHG
     double k1_xy = 2; //% Goal directed coefficient
     double k1_z = 2.5; //% Goal directed coefficient
     double k2_xy = 3; //% Rotation coefficient
@@ -83,9 +78,10 @@ struct  Path_Planning_Parameters
 
 struct  Head_Planning_Parameters
 {
-   double k_current_v = 0.7;
-   double k_planned_dir = 0.3;
+   double k_current_v_max = 0.7;
+   double k_planned_direction = 0.3;
    double k_v_fluctuation = 0.3;
+   double k_dynamic_objects = 0.1;
 }hp;
 
 /*** End of Parameters ***/
@@ -107,6 +103,8 @@ bool state_updating = false;
 bool in_emergency_mode = false;
 bool out_of_fence = false;
 bool safe_trajectory_avaliable = true;
+
+hist_kalman_mot::ObjectsInTracking dynamic_objects;
 
 /****** Global variables for path planning ******/
 ros::Time _data_input_time;
@@ -148,6 +146,13 @@ int mid_seq_num;
 
 double motor_yaw = 0.0;
 double motor_yaw_rate = 0.0;
+
+/** Publishers for cost visualization **/
+ros::Publisher cost_head_velocity_pub;
+ros::Publisher cost_head_direction_pub;
+ros::Publisher cost_head_objects_pub;
+ros::Publisher cost_head_fluctuation_pub;
+ros::Publisher cost_head_final_pub;
 
 /** Declaration of functions**/
 
@@ -383,7 +388,7 @@ void cloudPubCallback(const ros::TimerEvent& e)
     if(!initialized) return;
 
     /*Obstacle cloud*/
-    pcl::PointCloud<pcl::PointXYZ> cloud;
+    pcl::PointCloud<pcl::PointXYZRGB> cloud;
     Eigen::Vector3d center;
     rrb.getBufferAsCloud(cloud, center);
 
@@ -597,7 +602,22 @@ void path_publish(Eigen::Vector3d &Point)
     path_pub.publish(point);
 }
 
+/** Mahalanobis Distance calculation **/
+float calMahalanobisDistance3D(Eigen::Vector3f &point, Eigen::Vector3f &distribution_avg, Eigen::Matrix3f &distribution_cov)
+{
+    Eigen::Vector3f delt = point - distribution_avg;
+    return sqrt(delt.transpose() * distribution_cov.inverse() * delt);
+}
 
+/** Delt yaw calculation. Avoid +=Pi problem **/
+double deltYaw(double &yaw1, double &yaw2)
+{
+    double delt_yaw = fabs(yaw1 - yaw2);
+    if(delt_yaw > PI){
+        delt_yaw = PIx2 - delt_yaw;
+    }
+    return delt_yaw;
+}
 
 /** This is the function to generate the collision-free path, which is trigered by a timer defined in main function. **/
 void trajectoryCallback(const ros::TimerEvent& e) {
@@ -778,18 +798,63 @@ void trajectoryCallback(const ros::TimerEvent& e) {
         double coefficient_planned_dir =  1.0 - _direction_update_buffer(getHeadingSeq(theta_h_chosen));
         //ROS_INFO("coefficient_current_v=%lf, coefficient_planned_dir=%lf", coefficient_current_v, coefficient_planned_dir);
 
-        double min_head_plan_cost = 10000000.0;
+        std::vector<double> dynamic_objects_yaw;
+        for(const auto & ob_i : dynamic_objects.result){
+            double ob_i_yaw = atan2(ob_i.position.y, ob_i.position.x);
+            dynamic_objects_yaw.push_back(ob_i_yaw);
+        }
+
+        /** Visualization variables **/
+        std_msgs::Float64MultiArray cost_current_velocity_array;
+        std_msgs::Float64MultiArray cost_planned_direction_array;
+        std_msgs::Float64MultiArray cost_head_fluctuation_array;
+        std_msgs::Float64MultiArray cost_dynamic_objects_array;
+        std_msgs::Float64MultiArray cost_total_array;
+        /** End of visualization **/
+
+        double min_head_plan_cost = 10000000.0;  //smaller cost is better
         for(int i=0; i<LOOKING_PIECES_SIZE; i++){
             double head_yaw_plan_temp = getHeadingYawFromSeq(i);
-            double cost_temp = hp.k_current_v * (v_direction-head_yaw_plan_temp) * (v_direction-head_yaw_plan_temp) * coefficient_current_v
-                               + hp.k_planned_dir * (theta_h_chosen-head_yaw_plan_temp) * (theta_h_chosen-head_yaw_plan_temp) * coefficient_planned_dir
-                               + hp.k_v_fluctuation * (head_yaw_plan_temp - last_head_yaw_plan) * (head_yaw_plan_temp - last_head_yaw_plan);
-            if(cost_temp < min_head_plan_cost)
+
+            // Give a discount on hp.k_current_v_max so that when the velocity of the drone is low, the influence of the velocity direction is small.
+            double k_current_v = hp.k_current_v_max * std::max(std::min(std::max(fabs(v0(0)/MAX_V), fabs(v0(1)/MAX_V)), 1.0), 0.2); 
+            double cost_current_velocity = k_current_v * (v_direction-head_yaw_plan_temp) * (v_direction-head_yaw_plan_temp) * coefficient_current_v;
+            double cost_planned_direction = hp.k_planned_direction * (theta_h_chosen-head_yaw_plan_temp) * (theta_h_chosen-head_yaw_plan_temp) * coefficient_planned_dir;
+            double cost_head_fluctuation = hp.k_v_fluctuation * (head_yaw_plan_temp - last_head_yaw_plan) * (head_yaw_plan_temp - last_head_yaw_plan);
+
+            double cost_dynamic_objects = 0.0;
+            double cost_dynamic_objects_min = hp.k_dynamic_objects * 2;
+            for(auto & ob_yaw_i : dynamic_objects_yaw){
+                if(deltYaw(ob_yaw_i, head_yaw_plan_temp) < heading_resolution){
+                    cost_dynamic_objects -= hp.k_dynamic_objects;
+                }
+            }
+            cost_dynamic_objects = std::max(cost_dynamic_objects, -cost_dynamic_objects_min);
+
+            double cost_total_temp = cost_current_velocity + cost_planned_direction + cost_head_fluctuation + cost_dynamic_objects;
+
+            /*** For visualization **/
+            cost_current_velocity_array.data.push_back(cost_current_velocity);
+            cost_planned_direction_array.data.push_back(cost_planned_direction);
+            cost_head_fluctuation_array.data.push_back(cost_head_fluctuation);
+            cost_dynamic_objects_array.data.push_back(cost_dynamic_objects);
+            cost_total_array.data.push_back(cost_total_temp);
+            /** End of visualization **/
+
+            if(cost_total_temp < min_head_plan_cost)
             {
-                min_head_plan_cost = cost_temp;
+                min_head_plan_cost = cost_total_temp;
                 yaw_to_send = head_yaw_plan_temp;
             }
         }
+        /*** For visualization **/
+        cost_head_velocity_pub.publish(cost_current_velocity_array);
+        cost_head_direction_pub.publish(cost_planned_direction_array);
+        cost_head_objects_pub.publish(cost_dynamic_objects_array);
+        cost_head_fluctuation_pub.publish(cost_head_fluctuation_array);
+        cost_head_final_pub.publish(cost_total_array);
+        /** End of visualization **/
+
 
         yaw_rate_to_send = 0.9; // const speed for now
         sendMotorCommands(yaw_to_send, yaw_rate_to_send); //send to motor
@@ -970,7 +1035,7 @@ void positionCallback(const geometry_msgs::PoseStamped& msg)
         p0(1) = -msg.pose.position.x;
         p0(2) = msg.pose.position.z;
 
-	path_publish(p0);
+	    // path_publish(p0);
 
         quad.x() = msg.pose.orientation.x;
         quad.y() = msg.pose.orientation.y;   
@@ -993,6 +1058,13 @@ void positionCallback(const geometry_msgs::PoseStamped& msg)
             p_store = p0; //just used to show points, emergency mode will record its own start point
         }
         state_updating = false;
+
+        tf::TransformBroadcaster br_ros;  // For visualiztion 2 Dec.
+        tf::Transform transform_ros;   // For visualiztion 2 Dec.
+
+        transform_ros.setOrigin( tf::Vector3(p0(0), p0(1), p0(2)));
+        transform_ros.setRotation( tf::Quaternion(quad.x(), quad.y(), quad.z(), quad.w()) );
+        br_ros.sendTransform(tf::StampedTransform(transform_ros, ros::Time::now(), "world", "uav_link"));
     }
 }
 
@@ -1008,14 +1080,14 @@ void velocityCallback(const geometry_msgs::TwistStamped& msg)
         v0(2) = msg.twist.linear.z;
         yaw0_rate = msg.twist.angular.z;
 
-        if(fabs(v0(0)) > 0.15 || fabs(v0(1)) > 0.15){  //add a dead zone for v direction used in rolling head
+        if(fabs(v0(0)) > 0.05 || fabs(v0(1)) > 0.05){  //add a dead zone for v direction used in rolling head
             v_direction = atan2(v0(1), v0(0));  
         }
         //ROS_INFO("v_direction(yaw) = %f, v0(0)=%f, v0(1)=%f", v_direction, v0(0), v0(1));
 
-	if(fabs(v0(0)) < 0.05) v0(0) = 0.0;  //add a dead zone for v0 used in motion primatives
-	if(fabs(v0(1)) < 0.05) v0(1) = 0.0;  //add a dead zone for v0 used in motion primatives
-	if(fabs(v0(2)) < 0.05) v0(2) = 0.0;  //add a dead zone for v0 used in motion primatives
+    	if(fabs(v0(0)) < 0.05) v0(0) = 0.0;  //add a dead zone for v0 used in motion primatives
+    	if(fabs(v0(1)) < 0.05) v0(1) = 0.0;  //add a dead zone for v0 used in motion primatives
+    	if(fabs(v0(2)) < 0.05) v0(2) = 0.0;  //add a dead zone for v0 used in motion primatives
 
     	/** Calculate virtual accelerates from velocity. Original accelerates given by px4 is too noisy **/
         static bool init_v_flag = true;
@@ -1030,9 +1102,9 @@ void velocityCallback(const geometry_msgs::TwistStamped& msg)
     		a0(1) = (v0(1) - last_vy) / delt_t;
     		a0(2) = (v0(2) - last_vz) / delt_t;
 
-    		if(fabs(a0(0)) < 1.0) a0(0) = 0.0;  //dead zone for acc x
-     		if(fabs(a0(1)) < 1.0) a0(1) = 0.0; //dead zone for acc y
-    		if(fabs(a0(2)) < 1.0) a0(2) = 0.0; //dead zone for acc z
+    		if(fabs(a0(0)) < 0.8) a0(0) = 0.0;  //dead zone for acc x
+     		if(fabs(a0(1)) < 0.8) a0(1) = 0.0; //dead zone for acc y
+    		if(fabs(a0(2)) < 0.8) a0(2) = 0.0; //dead zone for acc z
 
     		//ROS_INFO("acc=(%f, %f, %f)", a0(0), a0(1), a0(2));
     	}
@@ -1043,6 +1115,19 @@ void velocityCallback(const geometry_msgs::TwistStamped& msg)
     	last_vz = v0(2);
 
         state_updating = false;
+    }
+}
+
+void dynamicObjectsCallback(const hist_kalman_mot::ObjectsInTracking &msg)
+{
+    dynamic_objects = msg;
+    /// Update the position of dynamic objects by predicting with a linear model. The position is then treated as the center of position distribution
+    double time_now = ros::Time::now().toSec();
+    for(auto & ob_i : dynamic_objects.result){
+        double time_interval = time_now - ob_i.last_observed_time;
+        ob_i.position.x = ob_i.position.x + ob_i.velocity.x * time_interval;
+        ob_i.position.y = ob_i.position.y + ob_i.velocity.y * time_interval;
+        ob_i.position.z = ob_i.position.z + ob_i.velocity.z * time_interval;
     }
 }
 
@@ -1074,9 +1159,10 @@ void sendMotorCommands(double yaw, double yaw_rate_abs) // Range[-Pi, Pi], [0, 1
 {
     static geometry_msgs::Point32 head_cmd;
     head_cmd.x = -yaw + init_head_yaw;  // + PI_2??  CHG
-    head_cmd.y = yaw_rate_abs * 72;
+    head_cmd.y = 0; //yaw_rate_abs * 72;  //Velocity, 0 means no control on speed
     head_cmd_pub.publish(head_cmd);
 }
+
 
 void limit_to_max(float &x, float x_max)
 {
@@ -1142,7 +1228,7 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
 
     // State parameters initiate
-    p_goal << 0.0, -8.0, 0.7;  //x, y, z
+    p_goal << 8.0, 0.0, 0.7;  //x, y, z
     p0 << 0.0, 0.0, 0.0;
     v0 << 0.0, 0.0, 0.0;
     a0 << 0.0, 0.0, 0.0;
@@ -1198,6 +1284,8 @@ int main(int argc, char** argv)
     ros::Subscriber motor_sub = nh.subscribe("/place_velocity_info", 1, motorCallback);
     ros::Subscriber cloud_sub = nh.subscribe("/camera/depth/color/points", 1, cloudCallback);
 
+    ros::Subscriber dynamic_objects_sub = nh.subscribe("/mot/objects_in_tracking", 1, dynamicObjectsCallback);
+
     // timer for publish ringbuffer as pointcloud
     ros::Timer timer1 = nh.createTimer(ros::Duration(0.2), cloudPubCallback); // RATE 5 Hz to publish
 
@@ -1206,6 +1294,14 @@ int main(int argc, char** argv)
 
     // timer for control points send
     ros::Timer timer3 = nh.createTimer(ros::Duration(SEND_DURATION), setPointSendCallback);
+
+
+    /***** Publisher for visulization ****/
+    cost_head_velocity_pub = nh.advertise<std_msgs::Float64MultiArray>("/head_cost/cost_head_velocity",1,true);
+    cost_head_direction_pub = nh.advertise<std_msgs::Float64MultiArray>("/head_cost/cost_head_direction",1,true);
+    cost_head_objects_pub = nh.advertise<std_msgs::Float64MultiArray>("/head_cost/cost_head_objects",1,true);
+    cost_head_fluctuation_pub = nh.advertise<std_msgs::Float64MultiArray>("/head_cost/cost_head_fluctuation",1,true);
+    cost_head_final_pub = nh.advertise<std_msgs::Float64MultiArray>("/head_cost/cost_head_final",1,true);
 
     std::cout << "Start mapping!" << std::endl;
 

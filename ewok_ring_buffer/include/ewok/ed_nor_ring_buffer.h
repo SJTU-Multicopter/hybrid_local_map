@@ -82,7 +82,7 @@ class EuclideanDistanceNormalRingBuffer
     }
 
     // get ringbuffer as pointcloud
-    void getBufferAsCloud(pcl::PointCloud<pcl::PointXYZ> &cloud, Eigen::Vector3d &center)
+    void getBufferAsCloud(pcl::PointCloud<pcl::PointXYZRGB> &cloud, Eigen::Vector3d &center)
     {
         // get center of ring buffer
         Vector3i c_idx = getVolumeCenter();
@@ -108,10 +108,19 @@ class EuclideanDistanceNormalRingBuffer
                     {
                         Vector3 p;
                         getPoint(coord, p);
-                        pcl::PointXYZ pclp;
+                        pcl::PointXYZRGB pclp;
                         pclp.x = p(0);
                         pclp.y = p(1);
                         pclp.z = p(2);
+                        if(p(2) < 0){
+                            pclp.r = 240;
+                            pclp.g = 240;
+                            pclp.b = 240;
+                        }else{
+                            pclp.r = 240;
+                            pclp.g = 10;
+                            pclp.b = 10;
+                        }
                         cloud.points.push_back(pclp);
                     }
                 }
