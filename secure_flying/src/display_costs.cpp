@@ -5,6 +5,11 @@
 #include <opencv2/opencv.hpp>
 #include <std_msgs/Float64MultiArray.h>
 #include <math.h>
+#include <vector>
+#include <map>
+#include <string>
+
+std::map<std::string, std::vector<double>> painting_data_map;
 
 void rotateVector(cv::Point &center, cv::Point &start_point, float angle, cv::Point &end_point)
 {
@@ -17,47 +22,91 @@ void rotateVector(cv::Point &center, cv::Point &start_point, float angle, cv::Po
 
 void costHeadObjectsCallback(const std_msgs::Float64MultiArray &msg)
 {
-    int num = msg.data.size();
-    int rows = 480;
-    int cols = 480;
-    cv::Point center = cv::Point(cols/2, rows/2);
+    painting_data_map["costHeadObjects"]=msg.data;
+}
+
+void costHeadVelocityCallback(const std_msgs::Float64MultiArray &msg)
+{
+    painting_data_map["costHeadVelocity"]=msg.data;
+}
+
+void costHeadDirectionCallback(const std_msgs::Float64MultiArray &msg)
+{
+    painting_data_map["costHeadDirection"]=msg.data;
+}
+
+void costHeadFluctuationCallback(const std_msgs::Float64MultiArray &msg)
+{
+    painting_data_map["costHeadFluctuation"]=msg.data;
+}
+
+void costHeadFinalCallback(const std_msgs::Float64MultiArray &msg)
+{
+    painting_data_map["costHeadFinal"]=msg.data;
+}
+
+void displayTimer(const ros::TimerEvent& e)
+{
+    int rows = 480;  // y
+    int cols = 700;  // x
+    int center_step = 200;
+    int size_one_pannel = 60;
     cv::Mat background = cv::Mat::zeros(rows, cols, CV_8UC3);
-    float angle_one_piece = 2*3.14159/num;
+    cv::Point center = cv::Point(center_step/2, center_step/2);
 
-    /** Map color to 0, 255 **/
-    double min_value = 1000000.f;
-    double max_value = -1000000.f;
-    for(auto & value_i : msg.data){
-        if(value_i < min_value){
-            min_value = value_i;
+    for(auto & vector_i : painting_data_map){
+        int num = vector_i.second.size();
+        float angle_one_piece = 2*M_PI/num;
+
+        /** Map color to 0, 255 **/
+        double min_value = 1000000.f;
+        double max_value = -1000000.f;
+        for(auto & value_i : vector_i.second){
+
+            if(value_i < min_value){
+                min_value = value_i;
+            }
+            if(value_i > max_value){
+                max_value = value_i;
+            }
         }
-        if(value_i > max_value){
-            max_value = value_i;
+
+        double delt_value = (max_value - min_value) / 250;
+        cv::Point start_point = cv::Point(center.x, center.y + size_one_pannel);
+        cv::Point text_place = cv::Point(start_point.x - 50, start_point.y + 20);
+        cv::putText(background, vector_i.first, text_place, CV_FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0, 0, 255));
+        cv::putText(background, "Max:"+std::to_string(max_value), cv::Point(text_place.x, text_place.y+20), CV_FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0, 0, 255));
+        cv::putText(background, " Min:"+std::to_string(min_value), cv::Point(text_place.x, text_place.y+40), CV_FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(0, 0, 255));
+
+        /// Draw triangles
+        for(int i=0; i<num; i++)
+        {
+            float delt_angle_rad = angle_one_piece * i; /// Note z axis is the opposite
+            cv::Point middle_point, left_point, right_point;
+            rotateVector(center, start_point, delt_angle_rad,middle_point);
+            rotateVector(center, middle_point, angle_one_piece/2.f,left_point);
+            rotateVector(center, middle_point, -angle_one_piece/2.f,right_point);
+
+            std::vector<cv::Point> contour;
+            contour.push_back(center);
+            contour.push_back(left_point);
+            contour.push_back(right_point);
+
+            std::vector<std::vector<cv::Point >> contours;
+            contours.push_back(contour);
+
+            int color = (int)(250 - (vector_i.second[i] - min_value)/delt_value) + 5;
+            cv::Scalar color_to_fill = cv::Scalar(0, 0, color);
+            if(vector_i.second[i] == min_value) color_to_fill(0) = 150;
+
+            cv::polylines(background, contours, true, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+            cv::fillPoly(background, contours, color_to_fill);
         }
-    }
-    double delt_value = (max_value - min_value) / 250;
-
-    cv::Point start_point = cv::Point(cols/2, rows/4*3);
-    for(int i=0; i<num; i++)
-    {
-        float delt_angle_rad = angle_one_piece * i;
-        cv::Point middle_point, left_point, right_point;
-        rotateVector(center, start_point, delt_angle_rad,middle_point);
-        rotateVector(center, middle_point, angle_one_piece/2.f,left_point);
-        rotateVector(center, middle_point, -angle_one_piece/2.f,right_point);
-
-        std::vector<cv::Point> contour;
-        contour.push_back(center);
-        contour.push_back(left_point);
-        contour.push_back(right_point);
-
-        std::vector<std::vector<cv::Point >> contours;
-        contours.push_back(contour);
-
-        int color = (int)(250 - (msg.data[i] - min_value)/delt_value) + 5;
-
-        cv::polylines(background, contours, true, cv::Scalar(0, 0, 0), 2, cv::LINE_AA);
-        cv::fillPoly(background, contours, cv::Scalar(0, 0, color));
+        center.x += center_step;
+        if(center.x > cols - center_step/2){
+            center.x = center_step/2;
+            center.y += center_step;
+        }
     }
 
     cv::imshow("costHeadObjects", background);
@@ -68,7 +117,13 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "display_costs");
     ros::NodeHandle nh;
-    ros::Subscriber objects_sub = nh.subscribe("/head_cost/cost_head_objects", 1, costHeadObjectsCallback);
+    ros::Subscriber cost_head_velocity_sub = nh.subscribe("/head_cost/cost_head_velocity", 1, costHeadVelocityCallback);
+    ros::Subscriber cost_head_direction_sub = nh.subscribe("/head_cost/cost_head_direction", 1, costHeadDirectionCallback);
+    ros::Subscriber cost_head_objects_sub = nh.subscribe("/head_cost/cost_head_objects", 1, costHeadObjectsCallback);
+    ros::Subscriber cost_head_fluctuation_sub = nh.subscribe("/head_cost/cost_head_fluctuation", 1, costHeadFluctuationCallback);
+    ros::Subscriber cost_head_final_sub = nh.subscribe("/head_cost/cost_head_final", 1, costHeadFinalCallback);
+
+    ros::Timer timer = nh.createTimer(ros::Duration(0.05), displayTimer);
 
     ros::spin();
 }

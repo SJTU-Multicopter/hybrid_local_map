@@ -52,7 +52,7 @@ ewok::EuclideanDistanceNormalRingBuffer<POW> rrb(resolution, 0.5); //Distance tr
 const int ANGLE_H_NUM = 17;
 const int ANGLE_V_NUM = 7;
 
-const int LOOKING_PIECES_SIZE = 18; // Should be even, Resolution: 20 degrees one piece. MID=8. Yaw=0. Larger: 9 - 17 :  0 to Pi;  Smaller: 7-0 : 0 to (nearly)-Pi;
+const int LOOKING_PIECES_SIZE = 16; // Should be even, Resolution: 22.5 degrees one piece. MID=7. Yaw=0. Larger: 7 - 15 :  0 to Pi;  Smaller: 7-0 : 0 to (nearly)-Pi;
 const float CAMERA_H_FOV = 62.f;  //degrees
 const float HEAD_BUFFER_HIT_INCREASE = 0.4f;
 const float HEAD_BUFFER_MISS_DECREASE_STANDARD_V = 0.05f; // Miss add value when velocity is 1m/s
@@ -81,7 +81,7 @@ struct  Head_Planning_Parameters
    double k_current_v_max = 0.7;
    double k_planned_direction = 0.3;
    double k_v_fluctuation = 0.3;
-   double k_dynamic_objects = 0.1;
+   double k_dynamic_objects = 0.5;
 }hp;
 
 /*** End of Parameters ***/
@@ -109,6 +109,7 @@ hist_kalman_mot::ObjectsInTracking dynamic_objects;
 /****** Global variables for path planning ******/
 ros::Time _data_input_time;
 ros::Time _algorithm_time;
+double global_time_now;  //update in position callback
 
 bool initialized = false;
 
@@ -610,8 +611,9 @@ float calMahalanobisDistance3D(Eigen::Vector3f &point, Eigen::Vector3f &distribu
 }
 
 /** Delt yaw calculation. Avoid +=Pi problem **/
-double deltYaw(double &yaw1, double &yaw2)
+double deltYawAbs(double &yaw1, double &yaw2)
 {
+    //std::cout << "(yaw1, yaw1)=" << yaw1 << "," << yaw2 <<std::endl;
     double delt_yaw = fabs(yaw1 - yaw2);
     if(delt_yaw > PI){
         delt_yaw = PIx2 - delt_yaw;
@@ -801,6 +803,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
         std::vector<double> dynamic_objects_yaw;
         for(const auto & ob_i : dynamic_objects.result){
             double ob_i_yaw = atan2(ob_i.position.y, ob_i.position.x);
+            std::cout << "ob_i_yaw=" << ob_i_yaw << " (x,y)=" << ob_i.position.x << "," << ob_i.position.y <<std::endl;
             dynamic_objects_yaw.push_back(ob_i_yaw);
         }
 
@@ -817,19 +820,19 @@ void trajectoryCallback(const ros::TimerEvent& e) {
             double head_yaw_plan_temp = getHeadingYawFromSeq(i);
 
             // Give a discount on hp.k_current_v_max so that when the velocity of the drone is low, the influence of the velocity direction is small.
-            double k_current_v = hp.k_current_v_max * std::max(std::min(std::max(fabs(v0(0)/MAX_V), fabs(v0(1)/MAX_V)), 1.0), 0.2); 
+            double k_current_v = hp.k_current_v_max * std::max(std::min(std::max(fabs(v0(0)/MAX_V), fabs(v0(1)/MAX_V)), 1.0), 0.0);
             double cost_current_velocity = k_current_v * (v_direction-head_yaw_plan_temp) * (v_direction-head_yaw_plan_temp) * coefficient_current_v;
             double cost_planned_direction = hp.k_planned_direction * (theta_h_chosen-head_yaw_plan_temp) * (theta_h_chosen-head_yaw_plan_temp) * coefficient_planned_dir;
             double cost_head_fluctuation = hp.k_v_fluctuation * (head_yaw_plan_temp - last_head_yaw_plan) * (head_yaw_plan_temp - last_head_yaw_plan);
 
             double cost_dynamic_objects = 0.0;
-            double cost_dynamic_objects_min = hp.k_dynamic_objects * 2;
+            double cost_dynamic_objects_min = - hp.k_dynamic_objects * 2;
             for(auto & ob_yaw_i : dynamic_objects_yaw){
-                if(deltYaw(ob_yaw_i, head_yaw_plan_temp) < heading_resolution){
+                if(deltYawAbs(ob_yaw_i, head_yaw_plan_temp) < heading_resolution){
                     cost_dynamic_objects -= hp.k_dynamic_objects;
                 }
             }
-            cost_dynamic_objects = std::max(cost_dynamic_objects, -cost_dynamic_objects_min);
+            cost_dynamic_objects = std::max(cost_dynamic_objects, cost_dynamic_objects_min);
 
             double cost_total_temp = cost_current_velocity + cost_planned_direction + cost_head_fluctuation + cost_dynamic_objects;
 
@@ -854,7 +857,6 @@ void trajectoryCallback(const ros::TimerEvent& e) {
         cost_head_fluctuation_pub.publish(cost_head_fluctuation_array);
         cost_head_final_pub.publish(cost_total_array);
         /** End of visualization **/
-
 
         yaw_rate_to_send = 0.9; // const speed for now
         sendMotorCommands(yaw_to_send, yaw_rate_to_send); //send to motor
@@ -1026,6 +1028,8 @@ void setPointSendCallback(const ros::TimerEvent& e)
 
 void positionCallback(const geometry_msgs::PoseStamped& msg)
 {
+    global_time_now = msg.header.stamp.toSec();
+
     if(!state_locked)
     {
         state_updating = true;
@@ -1122,9 +1126,8 @@ void dynamicObjectsCallback(const hist_kalman_mot::ObjectsInTracking &msg)
 {
     dynamic_objects = msg;
     /// Update the position of dynamic objects by predicting with a linear model. The position is then treated as the center of position distribution
-    double time_now = ros::Time::now().toSec();
     for(auto & ob_i : dynamic_objects.result){
-        double time_interval = time_now - ob_i.last_observed_time;
+        double time_interval = global_time_now - ob_i.last_observed_time;
         ob_i.position.x = ob_i.position.x + ob_i.velocity.x * time_interval;
         ob_i.position.y = ob_i.position.y + ob_i.velocity.y * time_interval;
         ob_i.position.z = ob_i.position.z + ob_i.velocity.z * time_interval;
@@ -1228,12 +1231,15 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
 
     // State parameters initiate
-    p_goal << 8.0, 0.0, 0.7;  //x, y, z
+    global_time_now = ros::Time::now().toSec();
+
+    p_goal << 0.0, 10.0, 0.7;  //x, y, z
     p0 << 0.0, 0.0, 0.0;
-    v0 << 0.0, 0.0, 0.0;
+    v0 << 0.0, -1.0, 0.0;
     a0 << 0.0, 0.0, 0.0;
     yaw0 = 0.0;
-    v_direction = 0.0;
+    v_direction = atan2(v0(1), v0(0));
+    std::cout << " v_direction init = " << v_direction << std::endl;
 
     // Fov sample parameters
     Fov_half << 35, 20;
@@ -1248,7 +1254,7 @@ int main(int argc, char** argv)
 
     _direction_update_buffer = Eigen::VectorXf::Zero(LOOKING_PIECES_SIZE); 
     heading_resolution =  2.f * PI / (float)LOOKING_PIECES_SIZE;
-    mid_seq_num = (int)(LOOKING_PIECES_SIZE / 2 - 1); // start from 0, mid is 8 when LOOKING_PIECES_SIZE is 18
+    mid_seq_num = (int)(LOOKING_PIECES_SIZE / 2); // start from 0, mid is 9 when LOOKING_PIECES_SIZE is 18
 
     int valid_piece_num = (int)((float)CAMERA_H_FOV / 180.f * PI / heading_resolution);
     if(valid_piece_num % 2 == 0)  valid_piece_num -= 1;

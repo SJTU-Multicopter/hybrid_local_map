@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/cc/catkin_ws/src/hybrid_local_map/secure_flying/cmake-build-debug/devel/setup.sh

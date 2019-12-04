@@ -112,7 +112,7 @@ class EuclideanDistanceNormalRingBuffer
                         pclp.x = p(0);
                         pclp.y = p(1);
                         pclp.z = p(2);
-                        if(p(2) < 0){
+                        if(p(2) < 0.2){
                             pclp.r = 240;
                             pclp.g = 240;
                             pclp.b = 240;
