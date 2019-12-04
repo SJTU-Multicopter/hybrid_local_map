@@ -1,8 +1,0 @@
-prefix=/home/cc/catkin_ws/src/hybrid_local_map/secure_flying/cmake-build-debug/devel
-
-Name: secure_flying
-Description: Description of secure_flying
-Version: 0.0.0
-Cflags: 
-Libs: -L/home/cc/catkin_ws/src/hybrid_local_map/secure_flying/cmake-build-debug/devel/lib 
-Requires: 
