@@ -65,7 +65,7 @@ const float fence_cancel_time = 3.f;
 
 struct  Path_Planning_Parameters
 {
-    double d_ref = 0.5;  //NOTE: NEED TO CHANGE CHG
+    double d_ref = 1.5;  //NOTE: NEED TO CHANGE CHG
     double k1_xy = 2; //% Goal directed coefficient
     double k1_z = 2.5; //% Goal directed coefficient
     double k2_xy = 3; //% Rotation coefficient
@@ -87,7 +87,7 @@ struct  Head_Planning_Parameters
 /*** End of Parameters ***/
 
 /** Basic global variables **/
-ros::Publisher current_marker_pub, path_pub;
+ros::Publisher current_marker_pub;
 ros::Publisher cloud2_pub, cloud_edf_pub, center_pub;
 
 ros::Publisher cmd_vel_pub; // add on 17 Sept.
@@ -571,43 +571,29 @@ void marker_publish(Eigen::MatrixXd &Points)
     current_marker_pub.publish(line_strip);
 }
 
-/* Publish markers to show the path in rviz */
-void path_publish(Eigen::Vector3d &Point)
-{
-    static int id = 0;
-    visualization_msgs::Marker point;
-    point.header.frame_id = "world";
-    point.header.stamp = ros::Time::now();
-    point.action = visualization_msgs::Marker::ADD;
-    point.ns = "path";
-
-    point.id = id;
-    id ++;
-    if(id>100000) id=0;
-
-    point.type = visualization_msgs::Marker::POINTS;
-
-    point.pose.position.x = Point(0);
-    point.pose.position.y = Point(1);
-    point.pose.position.z = Point(2);
-
-    point.scale.x = 0.02;
-    point.scale.y = 0.02;
-
-    // Points are green
-    point.color.r = 1.0;
-    point.color.g = 0.8;
-    point.color.b = 0.78;
-    point.color.a = 1.0;
-
-    path_pub.publish(point);
-}
 
 /** Mahalanobis Distance calculation **/
-float calMahalanobisDistance3D(Eigen::Vector3f &point, Eigen::Vector3f &distribution_avg, Eigen::Matrix3f &distribution_cov)
+float mahalanobisDistance3D(Eigen::Vector3f &point, Eigen::Vector3f &distribution_avg, Eigen::Matrix3f &distribution_cov)
 {
     Eigen::Vector3f delt = point - distribution_avg;
     return sqrt(delt.transpose() * distribution_cov.inverse() * delt);
+}
+
+bool dynmaicObstacleCollisionChecking(Eigen::Vector3f *traj_points, int Num, float threshold) {
+    for (int i = 0; i < Num; ++i) {
+        Eigen::Vector3f traj_point = traj_points[i];
+        for(auto & dynamic_obstacle_i : dynamic_objects.result){
+            Eigen::Matrix3f distribution_cov = Eigen::Matrix3f::Identity() * dynamic_obstacle_i.sigma;
+            Eigen::Vector3f object_position;
+            object_position << dynamic_obstacle_i.position.x, dynamic_obstacle_i.position.y, dynamic_obstacle_i.position.z;
+            float mahalanobis_distance = mahalanobisDistance3D(traj_point, object_position, distribution_cov);
+            if(mahalanobis_distance < threshold){
+                std::cout << "mahalanobis_distance = " << mahalanobis_distance << std::endl;
+                return false;
+            }
+        }
+    }
+    return true; //pass checking, no collision
 }
 
 /** Delt yaw calculation. Avoid +=Pi problem **/
@@ -683,7 +669,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
         bool collision_check_pass_flag = false;
 
         theta_h_chosen = theta_h_last; //if the uav is in safe mode, this would be the last value so the head wont rotate
-        for(int seq=0; seq<pp.max_plan_num; seq++)
+        for(int seq=0; seq<pp.max_plan_num; seq ++)
         {
             Eigen::MatrixXd p;
             Eigen::MatrixXd v;
@@ -695,13 +681,17 @@ void trajectoryCallback(const ros::TimerEvent& e) {
             const int Num = p.rows();
             Eigen::Vector3f *sim_traj = new Eigen::Vector3f[Num];
 
-            for (int i = 0; i < Num; ++i) {
+            for (int i = 0; i < Num; i+=1) {
                 sim_traj[i](0) = (float)p.row(i)(0);
                 sim_traj[i](1) = (float)p.row(i)(1);
                 sim_traj[i](2) = (float)p.row(i)(2);
             }
-            
+            /// collision cheking for static obtacles first
             collision_check_pass_flag = rrb.collision_checking(sim_traj, Num, 0.5); // Obstacle threshold is 0.5 now
+            /// If pass static obtacles collision cheking, then start for collision cheking dynamic obtacles.
+            if(collision_check_pass_flag){
+                collision_check_pass_flag = dynmaicObstacleCollisionChecking(sim_traj, Num, 1.0);
+            }
 
             if(collision_check_pass_flag)
             {
@@ -720,15 +710,15 @@ void trajectoryCallback(const ros::TimerEvent& e) {
                     send_buffer_size = p.rows();
                     if(send_buffer_size > send_buffer_size_max) send_buffer_size = send_buffer_size_max;
 
-                    for(int seq=0; seq<send_buffer_size; seq++)
+                    for(int point_seq=0; point_seq<send_buffer_size; point_seq++)
                     {
-                        send_traj_buffer_p[seq](0) = (float)p.row(seq)(0);
-                        send_traj_buffer_p[seq](1) = (float)p.row(seq)(1);
-                        send_traj_buffer_p[seq](2) = (float)p.row(seq)(2);
+                        send_traj_buffer_p[point_seq](0) = (float)p.row(point_seq)(0);
+                        send_traj_buffer_p[point_seq](1) = (float)p.row(point_seq)(1);
+                        send_traj_buffer_p[point_seq](2) = (float)p.row(point_seq)(2);
 
-                        send_traj_buffer_v[seq](0) = (float)v.row(seq)(0);
-                        send_traj_buffer_v[seq](1) = (float)v.row(seq)(1);
-                        send_traj_buffer_v[seq](2) = (float)v.row(seq)(2);
+                        send_traj_buffer_v[point_seq](0) = (float)v.row(point_seq)(0);
+                        send_traj_buffer_v[point_seq](1) = (float)v.row(point_seq)(1);
+                        send_traj_buffer_v[point_seq](2) = (float)v.row(point_seq)(2);
 
                     }
 
@@ -1039,8 +1029,6 @@ void positionCallback(const geometry_msgs::PoseStamped& msg)
         p0(1) = -msg.pose.position.x;
         p0(2) = msg.pose.position.z;
 
-	    // path_publish(p0);
-
         quad.x() = msg.pose.orientation.x;
         quad.y() = msg.pose.orientation.y;   
         quad.z() = msg.pose.orientation.z;
@@ -1233,9 +1221,9 @@ int main(int argc, char** argv)
     // State parameters initiate
     global_time_now = ros::Time::now().toSec();
 
-    p_goal << 0.0, 10.0, 0.7;  //x, y, z
+    p_goal << 10.0, 0.0, 0.7;  //x, y, z
     p0 << 0.0, 0.0, 0.0;
-    v0 << 0.0, -1.0, 0.0;
+    v0 << 0.0, 0.0, 0.0;
     a0 << 0.0, 0.0, 0.0;
     yaw0 = 0.0;
     v_direction = atan2(v0(1), v0(0));
@@ -1277,7 +1265,6 @@ int main(int argc, char** argv)
 
     center_pub = nh.advertise<geometry_msgs::PointStamped>("/ring_buffer/center",1,true) ;
     current_marker_pub = nh.advertise<visualization_msgs::Marker>("/visualization_marker", 1);
-    path_pub = nh.advertise<visualization_msgs::Marker>("/path", 1);
 
     head_cmd_pub = nh.advertise<geometry_msgs::Point32>("/gimbal_commands", 2, true); 
     cmd_vel_pub = nh.advertise<geometry_msgs::TwistStamped>("/mavros/setpoint_velocity/cmd_vel", 2, true); 

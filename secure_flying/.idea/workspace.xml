@@ -2,62 +2,62 @@
 <project version="4">
   <component name="CMakeRunConfigurationManager" shouldGenerate="true" shouldDeleteObsolete="true">
     <generated>
-      <config projectName="secure_flying" targetName="geometry_msgs_generate_messages_cpp" />
-      <config projectName="secure_flying" targetName="local_planning_dynamic" />
-      <config projectName="secure_flying" targetName="sensor_msgs_generate_messages_cpp" />
-      <config projectName="secure_flying" targetName="std_msgs_generate_messages_eus" />
-      <config projectName="secure_flying" targetName="rosgraph_msgs_generate_messages_cpp" />
-      <config projectName="secure_flying" targetName="tf_generate_messages_lisp" />
-      <config projectName="secure_flying" targetName="actionlib_generate_messages_lisp" />
-      <config projectName="secure_flying" targetName="geometry_msgs_generate_messages_lisp" />
-      <config projectName="secure_flying" targetName="actionlib_generate_messages_cpp" />
-      <config projectName="secure_flying" targetName="rosgraph_msgs_generate_messages_eus" />
-      <config projectName="secure_flying" targetName="tf_generate_messages_cpp" />
-      <config projectName="secure_flying" targetName="tests" />
-      <config projectName="secure_flying" targetName="gmock_main" />
+      <config projectName="secure_flying" targetName="roscpp_generate_messages_py" />
+      <config projectName="secure_flying" targetName="tf2_msgs_generate_messages_cpp" />
       <config projectName="secure_flying" targetName="std_msgs_generate_messages_cpp" />
-      <config projectName="secure_flying" targetName="roscpp_generate_messages_eus" />
-      <config projectName="secure_flying" targetName="display_costs" />
-      <config projectName="secure_flying" targetName="std_msgs_generate_messages_lisp" />
-      <config projectName="secure_flying" targetName="geometry_msgs_generate_messages_nodejs" />
-      <config projectName="secure_flying" targetName="actionlib_msgs_generate_messages_eus" />
-      <config projectName="secure_flying" targetName="tf_generate_messages_py" />
-      <config projectName="secure_flying" targetName="roscpp_generate_messages_nodejs" />
-      <config projectName="secure_flying" targetName="std_msgs_generate_messages_nodejs" />
-      <config projectName="secure_flying" targetName="clean_test_results" />
       <config projectName="secure_flying" targetName="sensor_msgs_generate_messages_nodejs" />
       <config projectName="secure_flying" targetName="actionlib_generate_messages_nodejs" />
-      <config projectName="secure_flying" targetName="roscpp_generate_messages_py" />
-      <config projectName="secure_flying" targetName="tf2_msgs_generate_messages_nodejs" />
-      <config projectName="secure_flying" targetName="doxygen" />
-      <config projectName="secure_flying" targetName="gtest_main" />
-      <config projectName="secure_flying" targetName="sensor_msgs_generate_messages_py" />
-      <config projectName="secure_flying" targetName="tf2_msgs_generate_messages_lisp" />
-      <config projectName="secure_flying" targetName="tf2_msgs_generate_messages_eus" />
-      <config projectName="secure_flying" targetName="actionlib_msgs_generate_messages_lisp" />
-      <config projectName="secure_flying" targetName="actionlib_msgs_generate_messages_py" />
-      <config projectName="secure_flying" targetName="tf_generate_messages_nodejs" />
-      <config projectName="secure_flying" targetName="geometry_msgs_generate_messages_eus" />
       <config projectName="secure_flying" targetName="gtest" />
-      <config projectName="secure_flying" targetName="actionlib_msgs_generate_messages_cpp" />
-      <config projectName="secure_flying" targetName="sensor_msgs_generate_messages_eus" />
-      <config projectName="secure_flying" targetName="actionlib_msgs_generate_messages_nodejs" />
-      <config projectName="secure_flying" targetName="tf2_msgs_generate_messages_py" />
-      <config projectName="secure_flying" targetName="sensor_msgs_generate_messages_lisp" />
+      <config projectName="secure_flying" targetName="rosgraph_msgs_generate_messages_cpp" />
       <config projectName="secure_flying" targetName="tf_generate_messages_eus" />
       <config projectName="secure_flying" targetName="rosgraph_msgs_generate_messages_lisp" />
-      <config projectName="secure_flying" targetName="rosgraph_msgs_generate_messages_nodejs" />
-      <config projectName="secure_flying" targetName="run_tests" />
-      <config projectName="secure_flying" targetName="gmock" />
-      <config projectName="secure_flying" targetName="actionlib_generate_messages_eus" />
-      <config projectName="secure_flying" targetName="download_extra_data" />
-      <config projectName="secure_flying" targetName="roscpp_generate_messages_cpp" />
-      <config projectName="secure_flying" targetName="rosgraph_msgs_generate_messages_py" />
-      <config projectName="secure_flying" targetName="tf2_msgs_generate_messages_cpp" />
+      <config projectName="secure_flying" targetName="geometry_msgs_generate_messages_cpp" />
+      <config projectName="secure_flying" targetName="clean_test_results" />
+      <config projectName="secure_flying" targetName="std_msgs_generate_messages_nodejs" />
+      <config projectName="secure_flying" targetName="sensor_msgs_generate_messages_py" />
+      <config projectName="secure_flying" targetName="sensor_msgs_generate_messages_cpp" />
+      <config projectName="secure_flying" targetName="tf_generate_messages_lisp" />
+      <config projectName="secure_flying" targetName="gtest_main" />
+      <config projectName="secure_flying" targetName="tf_generate_messages_py" />
       <config projectName="secure_flying" targetName="roscpp_generate_messages_lisp" />
-      <config projectName="secure_flying" targetName="std_msgs_generate_messages_py" />
-      <config projectName="secure_flying" targetName="actionlib_generate_messages_py" />
+      <config projectName="secure_flying" targetName="tf_generate_messages_nodejs" />
+      <config projectName="secure_flying" targetName="geometry_msgs_generate_messages_eus" />
+      <config projectName="secure_flying" targetName="gmock_main" />
+      <config projectName="secure_flying" targetName="run_tests" />
+      <config projectName="secure_flying" targetName="sensor_msgs_generate_messages_eus" />
+      <config projectName="secure_flying" targetName="actionlib_msgs_generate_messages_nodejs" />
+      <config projectName="secure_flying" targetName="download_extra_data" />
+      <config projectName="secure_flying" targetName="geometry_msgs_generate_messages_nodejs" />
+      <config projectName="secure_flying" targetName="actionlib_msgs_generate_messages_cpp" />
+      <config projectName="secure_flying" targetName="actionlib_msgs_generate_messages_py" />
+      <config projectName="secure_flying" targetName="doxygen" />
+      <config projectName="secure_flying" targetName="tf2_msgs_generate_messages_py" />
+      <config projectName="secure_flying" targetName="actionlib_generate_messages_lisp" />
+      <config projectName="secure_flying" targetName="std_msgs_generate_messages_lisp" />
+      <config projectName="secure_flying" targetName="roscpp_generate_messages_cpp" />
+      <config projectName="secure_flying" targetName="tf2_msgs_generate_messages_lisp" />
       <config projectName="secure_flying" targetName="geometry_msgs_generate_messages_py" />
+      <config projectName="secure_flying" targetName="actionlib_generate_messages_cpp" />
+      <config projectName="secure_flying" targetName="rosgraph_msgs_generate_messages_py" />
+      <config projectName="secure_flying" targetName="sensor_msgs_generate_messages_lisp" />
+      <config projectName="secure_flying" targetName="std_msgs_generate_messages_py" />
+      <config projectName="secure_flying" targetName="roscpp_generate_messages_nodejs" />
+      <config projectName="secure_flying" targetName="tf2_msgs_generate_messages_eus" />
+      <config projectName="secure_flying" targetName="tf2_msgs_generate_messages_nodejs" />
+      <config projectName="secure_flying" targetName="actionlib_generate_messages_py" />
+      <config projectName="secure_flying" targetName="tests" />
+      <config projectName="secure_flying" targetName="geometry_msgs_generate_messages_lisp" />
+      <config projectName="secure_flying" targetName="actionlib_msgs_generate_messages_eus" />
+      <config projectName="secure_flying" targetName="std_msgs_generate_messages_eus" />
+      <config projectName="secure_flying" targetName="roscpp_generate_messages_eus" />
+      <config projectName="secure_flying" targetName="display_costs" />
+      <config projectName="secure_flying" targetName="local_planning_dynamic" />
+      <config projectName="secure_flying" targetName="gmock" />
+      <config projectName="secure_flying" targetName="actionlib_msgs_generate_messages_lisp" />
+      <config projectName="secure_flying" targetName="rosgraph_msgs_generate_messages_eus" />
+      <config projectName="secure_flying" targetName="tf_generate_messages_cpp" />
+      <config projectName="secure_flying" targetName="actionlib_generate_messages_eus" />
+      <config projectName="secure_flying" targetName="rosgraph_msgs_generate_messages_nodejs" />
     </generated>
   </component>
   <component name="CMakeSettings">
@@ -67,9 +67,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d039b343-f42a-46d4-a044-a76654ebc463" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/../ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h" beforeDir="false" afterPath="$PROJECT_DIR$/../ewok_ring_buffer/include/ewok/ed_nor_ring_buffer.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/display_costs.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/display_costs.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/local_planning_dynamic.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/local_planning_dynamic.cpp" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -466,7 +464,7 @@
       <updated>1527045626568</updated>
       <workItem from="1527045628307" duration="7609000" />
       <workItem from="1575377157957" duration="13110000" />
-      <workItem from="1575438896637" duration="7433000" />
+      <workItem from="1575438896637" duration="11583000" />
     </task>
     <servers />
   </component>
