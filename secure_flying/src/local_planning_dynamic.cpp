@@ -84,6 +84,8 @@ struct  Head_Planning_Parameters
    double k_dynamic_objects = 0.5;
 }hp;
 
+const int point_num_pub = 5; // For the visualization of current planned trajectory
+
 /*** End of Parameters ***/
 
 /** Basic global variables **/
@@ -588,7 +590,7 @@ bool dynmaicObstacleCollisionChecking(Eigen::Vector3f *traj_points, int Num, flo
             object_position << dynamic_obstacle_i.position.x, dynamic_obstacle_i.position.y, dynamic_obstacle_i.position.z;
             float mahalanobis_distance = mahalanobisDistance3D(traj_point, object_position, distribution_cov);
             if(mahalanobis_distance < threshold){
-                std::cout << "mahalanobis_distance = " << mahalanobis_distance << std::endl;
+//                std::cout << "mahalanobis_distance = " << mahalanobis_distance << std::endl;
                 return false;
             }
         }
@@ -727,7 +729,6 @@ void trajectoryCallback(const ros::TimerEvent& e) {
                 }
                 
                 //Publish down sampled path points
-                const int point_num_pub = 5;
                 int interval_num = Num / point_num_pub;
                 if (interval_num > 0)
                 {
@@ -793,7 +794,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
         std::vector<double> dynamic_objects_yaw;
         for(const auto & ob_i : dynamic_objects.result){
             double ob_i_yaw = atan2(ob_i.position.y, ob_i.position.x);
-            std::cout << "ob_i_yaw=" << ob_i_yaw << " (x,y)=" << ob_i.position.x << "," << ob_i.position.y <<std::endl;
+//            std::cout << "ob_i_yaw=" << ob_i_yaw << " (x,y)=" << ob_i.position.x << "," << ob_i.position.y <<std::endl;
             dynamic_objects_yaw.push_back(ob_i_yaw);
         }
 
@@ -1119,6 +1120,8 @@ void dynamicObjectsCallback(const hist_kalman_mot::ObjectsInTracking &msg)
         ob_i.position.x = ob_i.position.x + ob_i.velocity.x * time_interval;
         ob_i.position.y = ob_i.position.y + ob_i.velocity.y * time_interval;
         ob_i.position.z = ob_i.position.z + ob_i.velocity.z * time_interval;
+        double delt_t = global_time_now - ob_i.last_observed_time;
+        // ob_i.sigma = ob_i.sigma * 0.25 * delt_t * delt_t; //something wrong
     }
 }
 
