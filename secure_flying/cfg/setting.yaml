@@ -1,0 +1,26 @@
+# Parameters for initial goal position
+goal_position_x: 10.0
+goal_position_y: 0.0
+goal_position_z: 0.7
+
+# Parameters for UAV path planning
+MAX_V: 2.0
+distance_reference_length: 1.5
+toward_goal_k1_xy: 2.0
+toward_goal_k1_z: 2.0
+less_variation_k2_xy: 3.0
+less_variation_k2_z: 3.5
+v_max_at_goal_ori: 1.0 #% m/s, just reference for goal velocity
+
+collision_threshold_static: 0.5
+collision_threshold_dynamic: 1.1
+
+#Parameters for head rotation planning
+k_current_v: 0.7
+k_planned_direction: 0.3
+k_v_fluctuation: 0.3
+k_dynamic_objects: 0.5
+
+#Other parameters
+if_publish_panel_arrays: true
+CAMERA_H_FOV: 62.0

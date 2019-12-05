@@ -53,12 +53,12 @@ const int ANGLE_H_NUM = 17;
 const int ANGLE_V_NUM = 7;
 
 const int LOOKING_PIECES_SIZE = 16; // Should be even, Resolution: 22.5 degrees one piece. MID=7. Yaw=0. Larger: 7 - 15 :  0 to Pi;  Smaller: 7-0 : 0 to (nearly)-Pi;
-const float CAMERA_H_FOV = 62.f;  //degrees
+float CAMERA_H_FOV = 62.f;  //degrees, in parameter list
 const float HEAD_BUFFER_HIT_INCREASE = 0.4f;
 const float HEAD_BUFFER_MISS_DECREASE_STANDARD_V = 0.05f; // Miss add value when velocity is 1m/s
 const float HEAD_BUFFER_MISS_DECREASE_MIN = 0.05f;
 
-const float MAX_V = 2.0f;
+float MAX_V = 2.0f;
 
 const float stop_time_before_change_direction = 10.f;
 const float fence_cancel_time = 3.f;
@@ -70,15 +70,17 @@ struct  Path_Planning_Parameters
     double k1_z = 2.5; //% Goal directed coefficient
     double k2_xy = 3; //% Rotation coefficient
     double k2_z = 3.5; //% Rotation coefficient
-    double v_max_ori = 1.0; //% m/s, just reference  5.0 originally
+    double v_max_at_goal_ori = 1.0; //% m/s, just reference  5.0 originally
     double v_scale_min = 0.1;
+    double collision_threshold_static = 0.5;
+    double collision_threshold_dynamic = 1.0;
     int max_plan_num = ANGLE_H_NUM * ANGLE_V_NUM;  // Previously it was 100, as 18*7 = 126 > 100
 }pp;
 
 
 struct  Head_Planning_Parameters
 {
-   double k_current_v_max = 0.7;
+   double k_current_v = 0.7;
    double k_planned_direction = 0.3;
    double k_v_fluctuation = 0.3;
    double k_dynamic_objects = 0.5;
@@ -151,6 +153,7 @@ double motor_yaw = 0.0;
 double motor_yaw_rate = 0.0;
 
 /** Publishers for cost visualization **/
+bool if_publish_panel_arrays = false;
 ros::Publisher cost_head_velocity_pub;
 ros::Publisher cost_head_direction_pub;
 ros::Publisher cost_head_objects_pub;
@@ -159,7 +162,7 @@ ros::Publisher cost_head_final_pub;
 
 /** Declaration of functions**/
 
-void sendMotorCommands(double yaw, double yaw_rate_abs);
+void sendMotorCommands(double yaw);
 
 void trackVelocityPoseNWUtoENU(float vx_sp, float vy_sp, float vz_sp, float yaw_rate_sp, 
                     float px_sp_last, float py_sp_last, float pz_sp_last, float yaw_sp_last);
@@ -272,7 +275,6 @@ void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& cloud)
     axis.y() = axis.y() * sin(motor_yaw/2.0);
     axis.z() = axis.z() * sin(motor_yaw/2.0);
     Eigen::Quaternionf quad_rotate = quad * axis;
-
 
     // create transform matrix
     Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
@@ -581,7 +583,7 @@ float mahalanobisDistance3D(Eigen::Vector3f &point, Eigen::Vector3f &distributio
     return sqrt(delt.transpose() * distribution_cov.inverse() * delt);
 }
 
-bool dynmaicObstacleCollisionChecking(Eigen::Vector3f *traj_points, int Num, float threshold) {
+bool dynmaicObstacleCollisionChecking(Eigen::Vector3f *traj_points, int Num, double threshold) {
     for (int i = 0; i < Num; ++i) {
         Eigen::Vector3f traj_point = traj_points[i];
         for(auto & dynamic_obstacle_i : dynamic_objects.result){
@@ -666,7 +668,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
         double v_scale = std::max(delt_p.dot(v0)/v0.norm()/delt_p.norm(), pp.v_scale_min);
         // If v0.norm() = 0, v_scale = nan
         v_scale = (v0.norm() == 0) ? pp.v_scale_min : v_scale;
-        double v_max = pp.v_max_ori * v_scale;
+        double v_max = pp.v_max_at_goal_ori * v_scale;
 
         bool collision_check_pass_flag = false;
 
@@ -689,10 +691,10 @@ void trajectoryCallback(const ros::TimerEvent& e) {
                 sim_traj[i](2) = (float)p.row(i)(2);
             }
             /// collision cheking for static obtacles first
-            collision_check_pass_flag = rrb.collision_checking(sim_traj, Num, 0.5); // Obstacle threshold is 0.5 now
+            collision_check_pass_flag = rrb.collision_checking(sim_traj, Num, pp.collision_threshold_static); // Obstacle threshold is 0.5 now
             /// If pass static obtacles collision cheking, then start for collision cheking dynamic obtacles.
             if(collision_check_pass_flag){
-                collision_check_pass_flag = dynmaicObstacleCollisionChecking(sim_traj, Num, 1.0);
+                collision_check_pass_flag = dynmaicObstacleCollisionChecking(sim_traj, Num, pp.collision_threshold_dynamic);
             }
 
             if(collision_check_pass_flag)
@@ -752,16 +754,10 @@ void trajectoryCallback(const ros::TimerEvent& e) {
             safe_trajectory_avaliable = false;
             
             // Publish points of stored point to show
-            Eigen::MatrixXd show_points = Eigen::MatrixXd::Zero(6, 3);
+            Eigen::MatrixXd show_points = Eigen::MatrixXd::Zero(1, 3);
             show_points(0, 0) = p0(0);
             show_points(0, 1) = p0(1);
             show_points(0, 2) = p0(2);
-            for(int pubi = 1; pubi < 5; pubi++)
-            {
-                show_points(pubi, 0) = p_store(0);
-                show_points(pubi, 1) = p_store(1);
-                show_points(pubi, 2) = p_store(2);
-            }
             marker_publish(show_points);
         }
 
@@ -778,14 +774,14 @@ void trajectoryCallback(const ros::TimerEvent& e) {
 
     if(first_head_control_flag){
         first_head_control_flag = false;
-        sendMotorCommands(0.0, 0.5);
+        sendMotorCommands(0.0);
     }
     else{
         /// Rank by the cost given from current velocity direction, the sampled last direction and the last planned head direction
         Eigen::VectorXd cost_vector = Eigen::VectorXd::Zero(LOOKING_PIECES_SIZE);
 
         /// Current velocity direction(v_direction), planned velocity direction(theta_h_chosen), yaw of the head must be in the same coordinate!!
-        double yaw_to_send, yaw_rate_to_send;
+        double yaw_to_send;
 
         double coefficient_current_v =  1.0 - _direction_update_buffer(getHeadingSeq(v_direction));
         double coefficient_planned_dir =  1.0 - _direction_update_buffer(getHeadingSeq(theta_h_chosen));
@@ -810,8 +806,8 @@ void trajectoryCallback(const ros::TimerEvent& e) {
         for(int i=0; i<LOOKING_PIECES_SIZE; i++){
             double head_yaw_plan_temp = getHeadingYawFromSeq(i);
 
-            // Give a discount on hp.k_current_v_max so that when the velocity of the drone is low, the influence of the velocity direction is small.
-            double k_current_v = hp.k_current_v_max * std::max(std::min(std::max(fabs(v0(0)/MAX_V), fabs(v0(1)/MAX_V)), 1.0), 0.0);
+            // Give a discount on hp.k_current_v (max) so that when the velocity of the drone is low, the influence of the velocity direction is small.
+            double k_current_v = hp.k_current_v * std::max(std::min(std::max(fabs(v0(0)/MAX_V), fabs(v0(1)/MAX_V)), 1.0), 0.0);
             double cost_current_velocity = k_current_v * (v_direction-head_yaw_plan_temp) * (v_direction-head_yaw_plan_temp) * coefficient_current_v;
             double cost_planned_direction = hp.k_planned_direction * (theta_h_chosen-head_yaw_plan_temp) * (theta_h_chosen-head_yaw_plan_temp) * coefficient_planned_dir;
             double cost_head_fluctuation = hp.k_v_fluctuation * (head_yaw_plan_temp - last_head_yaw_plan) * (head_yaw_plan_temp - last_head_yaw_plan);
@@ -828,11 +824,13 @@ void trajectoryCallback(const ros::TimerEvent& e) {
             double cost_total_temp = cost_current_velocity + cost_planned_direction + cost_head_fluctuation + cost_dynamic_objects;
 
             /*** For visualization **/
-            cost_current_velocity_array.data.push_back(cost_current_velocity);
-            cost_planned_direction_array.data.push_back(cost_planned_direction);
-            cost_head_fluctuation_array.data.push_back(cost_head_fluctuation);
-            cost_dynamic_objects_array.data.push_back(cost_dynamic_objects);
-            cost_total_array.data.push_back(cost_total_temp);
+            if(if_publish_panel_arrays){
+                cost_current_velocity_array.data.push_back(cost_current_velocity);
+                cost_planned_direction_array.data.push_back(cost_planned_direction);
+                cost_head_fluctuation_array.data.push_back(cost_head_fluctuation);
+                cost_dynamic_objects_array.data.push_back(cost_dynamic_objects);
+                cost_total_array.data.push_back(cost_total_temp);
+            }
             /** End of visualization **/
 
             if(cost_total_temp < min_head_plan_cost)
@@ -842,21 +840,22 @@ void trajectoryCallback(const ros::TimerEvent& e) {
             }
         }
         /*** For visualization **/
-        cost_head_velocity_pub.publish(cost_current_velocity_array);
-        cost_head_direction_pub.publish(cost_planned_direction_array);
-        cost_head_objects_pub.publish(cost_dynamic_objects_array);
-        cost_head_fluctuation_pub.publish(cost_head_fluctuation_array);
-        cost_head_final_pub.publish(cost_total_array);
-        /** End of visualization **/
+        if(if_publish_panel_arrays){
+            cost_head_velocity_pub.publish(cost_current_velocity_array);
+            cost_head_direction_pub.publish(cost_planned_direction_array);
+            cost_head_objects_pub.publish(cost_dynamic_objects_array);
+            cost_head_fluctuation_pub.publish(cost_head_fluctuation_array);
+            cost_head_final_pub.publish(cost_total_array);
+        }
 
-        yaw_rate_to_send = 0.9; // const speed for now
-        sendMotorCommands(yaw_to_send, yaw_rate_to_send); //send to motor
+        /** End of visualization **/
+        sendMotorCommands(yaw_to_send); //send to motor
 
         last_head_yaw_plan = yaw_to_send;
     }
 }
 
-void emergency_stop(bool &init, Eigen::Vector3d p0_local, Eigen::Vector3d v0_local)
+void emergencyStop(bool &init, Eigen::Vector3d p0_local, Eigen::Vector3d v0_local)
 {
     static float emergency_acc_xy = 5.f;
     static float emergency_acc_z = 5.f;
@@ -959,7 +958,7 @@ void setPointSendCallback(const ros::TimerEvent& e)
         else  //emergency mode
         {
             in_emergency_mode = true;
-            emergency_stop(emergency_stop_init, p0, v0);
+            emergencyStop(emergency_stop_init, p0, v0);
 
             // Update the send buffer here to a constant stop value for safety in mode changing
             if(!send_buffer_locked)
@@ -1149,11 +1148,11 @@ void motorCallback(const geometry_msgs::Point32& msg)
     }
 }
 
-void sendMotorCommands(double yaw, double yaw_rate_abs) // Range[-Pi, Pi], [0, 1]
+void sendMotorCommands(double yaw) // Range[-Pi, Pi], [0, 1]
 {
     static geometry_msgs::Point32 head_cmd;
     head_cmd.x = -yaw + init_head_yaw;  // + PI_2??  CHG
-    head_cmd.y = 0; //yaw_rate_abs * 72;  //Velocity, 0 means no control on speed
+    head_cmd.y = 0;
     head_cmd_pub.publish(head_cmd);
 }
 
@@ -1216,15 +1215,40 @@ void trackVelocityPoseNWUtoENU(float vx_sp, float vy_sp, float vz_sp, float yaw_
     // ROS_INFO("vx_sp=%f,vy_sp=%f,vz_sp=%f,yaw_rate_sp=%f", vx_sp, vy_sp, vz_sp, yaw_rate_sp);
 }
 
+void getParameterList(ros::NodeHandle &nh){
+    nh.getParam("/local_planning_dynamic/goal_position_x", p_goal(0));
+    nh.getParam("/local_planning_dynamic/goal_position_y", p_goal(1));
+    nh.getParam("/local_planning_dynamic/goal_position_z", p_goal(2));
+    nh.getParam("/local_planning_dynamic/MAX_V", MAX_V);
+    nh.getParam("/local_planning_dynamic/distance_reference_length", pp.d_ref);
+    nh.getParam("/local_planning_dynamic/toward_goal_k1_xy", pp.k1_xy);
+    nh.getParam("/local_planning_dynamic/toward_goal_k1_z", pp.k1_z);
+    nh.getParam("/local_planning_dynamic/less_variation_k2_xy", pp.k2_xy);
+    nh.getParam("/local_planning_dynamic/less_variation_k2_z", pp.k2_z);
+    nh.getParam("/local_planning_dynamic/v_max_at_goal_ori", pp.v_max_at_goal_ori);
+    nh.getParam("/local_planning_dynamic/collision_threshold_static", pp.collision_threshold_static);
+    nh.getParam("/local_planning_dynamic/collision_threshold_dynamic", pp.collision_threshold_dynamic);
+    nh.getParam("/local_planning_dynamic/k_current_v", hp.k_current_v);
+    nh.getParam("/local_planning_dynamic/k_planned_direction", hp.k_planned_direction);
+    nh.getParam("/local_planning_dynamic/k_v_fluctuation", hp.k_v_fluctuation);
+    nh.getParam("/local_planning_dynamic/k_dynamic_objects", hp.k_dynamic_objects);
+    nh.getParam("/local_planning_dynamic/if_publish_panel_arrays", if_publish_panel_arrays);
+    nh.getParam("/local_planning_dynamic/CAMERA_H_FOV", CAMERA_H_FOV);
+
+    ROS_INFO("Parameters list reading finished! Goal position is: (%f, %f, %f), MAX Vel is %f", p_goal(0), p_goal(1), p_goal(2), MAX_V);
+}
+
+
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "local_planning");
     ros::NodeHandle nh;
 
+    getParameterList(nh);
+
     // State parameters initiate
     global_time_now = ros::Time::now().toSec();
 
-    p_goal << 10.0, 0.0, 0.7;  //x, y, z
     p0 << 0.0, 0.0, 0.0;
     v0 << 0.0, 0.0, 0.0;
     a0 << 0.0, 0.0, 0.0;
@@ -1238,6 +1262,11 @@ int main(int argc, char** argv)
     //Angle_h << -90, -70, -50, -30, -20, -10, 0, 10, 20, 30, 50, 70, 90;
     Angle_h << -90, -75, -60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 75, 90;
     Angle_v << -40, -20, -10, 0, 10, 20, 40;
+
+    if(Angle_h.size() != ANGLE_H_NUM || Angle_v.size() != ANGLE_V_NUM){
+        ROS_INFO(" ANGLE_H_NUM or ANGLE_V_NUM mismatches the initialized vector. Please check!");
+        return 0;
+    }
 
     Angle_h = Angle_h * M_PI / 180.0;
     Angle_v = Angle_v * M_PI / 180.0;

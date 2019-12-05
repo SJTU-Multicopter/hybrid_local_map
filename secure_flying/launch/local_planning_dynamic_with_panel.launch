@@ -1,0 +1,11 @@
+<launch>
+	<node pkg="secure_flying" name="local_planning_dynamic" type="local_planning_dynamic" output="screen">
+		<rosparam 
+	        file="$(find secure_flying)/cfg/setting.yaml"
+	        command="load" 
+		/>
+		<param name="if_publish_panel_arrays" type="bool" value="true"/>  
+	</node>
+	<node pkg="secure_flying" name="display_costs" type="display_costs" output="screen">
+	</node>
+</launch>
