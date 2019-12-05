@@ -86,6 +86,16 @@ struct  Head_Planning_Parameters
    double k_dynamic_objects = 0.5;
 }hp;
 
+struct  Position_Tracker_Parameters
+{
+    float kp_xy = 0.1;
+    float kp_z = 0.1;
+    float kp_yaw = 0.05;
+    float p_2_delt_v_max_xy = 0.5;
+    float p_2_delt_v_max_z = 0.4;
+    float max_yaw_rate = 1.0;
+}pt;
+
 const int point_num_pub = 5; // For the visualization of current planned trajectory
 
 /*** End of Parameters ***/
@@ -1170,14 +1180,14 @@ void trackVelocityPoseNWUtoENU(float vx_sp, float vy_sp, float vz_sp, float yaw_
 {
     geometry_msgs::TwistStamped cmd_to_pub;
     /*Simple tracker*/
-    static float kp_xy = 0.1;
-    static float kp_z = 0.1;
-    static float kp_yaw = 0.05;
-    static float p_2_delt_v_max_xy = 0.5;
-    static float p_2_delt_v_max_z = 0.4;
+    static float kp_xy = pt.kp_xy;
+    static float kp_z = pt.kp_z;
+    static float kp_yaw = pt.kp_yaw;
+    static float p_2_delt_v_max_xy = pt.p_2_delt_v_max_xy;
+    static float p_2_delt_v_max_z = pt.p_2_delt_v_max_z;
     static float max_v_xy = MAX_V;
     static float max_v_z = MAX_V;
-    static float max_yaw_rate = 1.0;
+    static float max_yaw_rate = pt.max_yaw_rate;
 
     float time_interval = SEND_DURATION;
     // NOTE: The updating frequency of position is not equal to CONTROL_RATE. It is just a reference time.
@@ -1234,6 +1244,12 @@ void getParameterList(ros::NodeHandle &nh){
     nh.getParam("/local_planning_dynamic/k_dynamic_objects", hp.k_dynamic_objects);
     nh.getParam("/local_planning_dynamic/if_publish_panel_arrays", if_publish_panel_arrays);
     nh.getParam("/local_planning_dynamic/CAMERA_H_FOV", CAMERA_H_FOV);
+    nh.getParam("/local_planning_dynamic/kp_xy", pt.kp_xy);
+    nh.getParam("/local_planning_dynamic/kp_z", pt.kp_z);
+    nh.getParam("/local_planning_dynamic/kp_yaw", pt.kp_yaw);
+    nh.getParam("/local_planning_dynamic/p_2_delt_v_max_xy", pt.p_2_delt_v_max_xy);
+    nh.getParam("/local_planning_dynamic/p_2_delt_v_max_z", pt.p_2_delt_v_max_z);
+    nh.getParam("/local_planning_dynamic/max_yaw_rate", pt.max_yaw_rate);
 
     ROS_INFO("Parameters list reading finished! Goal position is: (%f, %f, %f), MAX Vel is %f", p_goal(0), p_goal(1), p_goal(2), MAX_V);
 }

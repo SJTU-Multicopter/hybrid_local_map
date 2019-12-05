@@ -21,6 +21,15 @@ k_planned_direction: 0.3
 k_v_fluctuation: 0.3
 k_dynamic_objects: 0.5
 
+#Parameters for tracker
+kp_xy: 0.1
+kp_z: 0.1
+kp_yaw: 0.05
+p_2_delt_v_max_xy: 0.5
+p_2_delt_v_max_z: 0.4
+max_yaw_rate: 1.0  #Max xyz velocity is the same as MAX_V
+
 #Other parameters
 if_publish_panel_arrays: true
 CAMERA_H_FOV: 62.0
+
