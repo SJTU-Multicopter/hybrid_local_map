@@ -20,6 +20,11 @@ void rotateVector(cv::Point &center, cv::Point &start_point, float angle, cv::Po
     end_point = new_point_vector + center;
 }
 
+void costHeadUpdateCallback(const std_msgs::Float64MultiArray &msg)
+{
+    painting_data_map["costHeadUpdate"]=msg.data;
+}
+
 void costHeadObjectsCallback(const std_msgs::Float64MultiArray &msg)
 {
     painting_data_map["costHeadObjects"]=msg.data;
@@ -121,6 +126,7 @@ int main(int argc, char** argv)
     ros::Subscriber cost_head_direction_sub = nh.subscribe("/head_cost/cost_head_direction", 1, costHeadDirectionCallback);
     ros::Subscriber cost_head_objects_sub = nh.subscribe("/head_cost/cost_head_objects", 1, costHeadObjectsCallback);
     ros::Subscriber cost_head_fluctuation_sub = nh.subscribe("/head_cost/cost_head_fluctuation", 1, costHeadFluctuationCallback);
+    ros::Subscriber cost_head_update_sub = nh.subscribe("/head_cost/cost_head_update", 1, costHeadUpdateCallback);
     ros::Subscriber cost_head_final_sub = nh.subscribe("/head_cost/cost_head_final", 1, costHeadFinalCallback);
 
     ros::Timer timer = nh.createTimer(ros::Duration(0.05), displayTimer);

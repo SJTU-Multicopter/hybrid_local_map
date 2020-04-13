@@ -10,7 +10,7 @@
 #include <vector>
 #include <math.h>
 #include <geometry_msgs/Point32.h>
-
+#include <control_msgs/JointControllerState.h>
 
 // [[[need to install serial pkg first!!!!!]]] sudo apt-get install ros-kinetic-serial
 // 解析时按照对应解析
@@ -57,6 +57,10 @@ u_char readthevelocity[] = {0xff,0xff,0x01,0x04,0x02,0x3a,0x02,0xbc};
 int len = 0;
 int lenone=0;
 geometry_msgs::Point32 twomsg;
+control_msgs::JointControllerState position_msg;
+
+ros::Publisher po_ve_pub2;
+
 //minpeng 
 void serial_write_int(int data){
     u_int8_t buffer[] = {BYTE0(data),BYTE1(data),BYTE2(data),BYTE3(data),BYTE4(data),BYTE5(data),BYTE6(data),BYTE7(data),
@@ -165,6 +169,11 @@ void place_serial_data(){
         	float place_read = (place_read_low + place_read_high)*pi/2048;
         	//ROS_INFO("the place=%f",place_read);
         	twomsg.x = place_read;
+
+            position_msg.process_value = place_read;
+            position_msg.header.frame_id = "world";
+            position_msg.header.stamp = ros::Time::now();
+            po_ve_pub2.publish(position_msg);
         }
         	
     }
@@ -193,6 +202,8 @@ int main (int argc, char** argv)
     ros::Subscriber sub = nh.subscribe("/gimbal_commands", 1, commandsCallback);
     // publisher
     ros::Publisher po_ve_pub = nh.advertise<geometry_msgs::Point32>("place_velocity_info", 1);
+    po_ve_pub2 = nh.advertise<control_msgs::JointControllerState>("place_velocity_info_joint_state", 1);
+
     try 
     { 
     //设置串口属性，并打开串口 
@@ -220,15 +231,15 @@ int main (int argc, char** argv)
     // serial_write_data();
     //minpeng
 
-    ros::Rate loop_rate(40); 
+    ros::Rate loop_rate(50);  //ori 40
     while(ros::ok()) 
     {	
         serial_write_data();
-        ros::Duration(0.01).sleep();
+        ros::Duration(0.005).sleep(); //ori 0.01
 
         place_serial_data();
 
-        ros::Duration(0.001).sleep();
+        ros::Duration(0.001).sleep(); 
         velocity_serial_data();
 
         ros::Duration(0.001).sleep();
