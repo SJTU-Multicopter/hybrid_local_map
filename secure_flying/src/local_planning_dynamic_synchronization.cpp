@@ -367,13 +367,13 @@ void cloudCallback(const control_msgs::JointControllerStateConstPtr &motor_msg, 
     std::cout << "cloud mismatch time = " << cloud->header.stamp.toSec() - collected_time << std::endl;
 
     // Add the rotation of head
-    Eigen::Quaternionf q1(0, 0, 0, 1);
-    Eigen::Quaternionf axis = quad * q1 * quad.inverse();
-    axis.w() = cos(motor_yaw/2.0);
-    axis.x() = axis.x() * sin(motor_yaw/2.0);
-    axis.y() = axis.y() * sin(motor_yaw/2.0);
-    axis.z() = axis.z() * sin(motor_yaw/2.0);
-    Eigen::Quaternionf quad_rotate = quad * axis;
+    Eigen::Quaternionf axis_motor;
+    axis_motor.w() = cos(motor_yaw/2.0);
+    axis_motor.x() = 0;
+    axis_motor.y() = 0;
+    axis_motor.z() = sin(motor_yaw/2.0);
+    Eigen::Quaternionf quad_rotate = quad * axis_motor;
+
 
     // create transform matrix
     Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
