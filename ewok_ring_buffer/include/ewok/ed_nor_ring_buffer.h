@@ -305,6 +305,19 @@ class EuclideanDistanceNormalRingBuffer
     bool collision_checking_no_fence(Eigen::Vector3f *traj_points, int Num, _Scalar threshold) {
         bool all_safe = true;
 
+        //Check the last point in the path first
+        Vector3i traj_point_idx_the_last_point;
+        Vector3 traj_point_the_last_point = traj_points[Num-1].template cast<_Scalar>();
+        distance_buffer_.getIdx(traj_point_the_last_point, traj_point_idx_the_last_point);
+        if (distance_buffer_.insideVolume(traj_point_idx_the_last_point)){
+            if(distance_buffer_.at(traj_point_idx_the_last_point) < threshold ){
+                return false;
+            }
+        }else{
+            return false;
+        }
+
+        // Set first late checked point
         Vector3i traj_point_idx_last;
         Vector3 traj_point_last = traj_points[2].template cast<_Scalar>();
         distance_buffer_.getIdx(traj_point_last, traj_point_idx_last);
@@ -344,6 +357,20 @@ class EuclideanDistanceNormalRingBuffer
     bool collision_checking_with_fence(Eigen::Vector3f *traj_points, int Num, _Scalar threshold, float max_height=120.f, float xy_max=10000.f) {
         bool all_safe = true;
 
+        //Check the last point in the path first
+        Vector3i traj_point_idx_the_last_point;
+        Vector3 traj_point_the_last_point = traj_points[Num-1].template cast<_Scalar>();
+
+        distance_buffer_.getIdx(traj_point_the_last_point, traj_point_idx_the_last_point);
+        if (occupancy_buffer_.isFree(traj_point_idx_the_last_point)){ //(distance_buffer_.insideVolume(traj_point_idx_the_last_point)){
+            if(distance_buffer_.at(traj_point_idx_the_last_point) < threshold ){
+                return false;
+            }
+        }else{
+            return false;
+        }
+
+        // Set first late checked point
         Vector3i traj_point_idx_last;
         Vector3 traj_point_last = traj_points[2].template cast<_Scalar>();
         distance_buffer_.getIdx(traj_point_last, traj_point_idx_last);
@@ -352,7 +379,7 @@ class EuclideanDistanceNormalRingBuffer
             distance_last_point = distance_buffer_.at(traj_point_idx_last);
         }
 
-        for (int i = 3; i < Num; i+=2) {  /// Start from the third point, check every three point
+        for (int i = 3; i < Num; i+=2) {  /// Start from the third point, check every two point
             Vector3 traj_point = traj_points[i].template cast<_Scalar>();
             Vector3i traj_point_idx;
 
@@ -365,16 +392,15 @@ class EuclideanDistanceNormalRingBuffer
             }else if(traj_point(2) > max_height && traj_point[2] > traj_point_last[2]){  /// Height limitation
                 all_safe = false;
                 break;
-            }else if(traj_point(2) < 0.3f){
+            }else if(traj_point(2) < 0.4f){
                 all_safe = false;
                 break;
             }
 
             distance_buffer_.getIdx(traj_point, traj_point_idx);
 
-            if (distance_buffer_.insideVolume(traj_point_idx)) {  //if inside
+            if(occupancy_buffer_.isFree(traj_point_idx)){ //(distance_buffer_.insideVolume(traj_point_idx)) {  //if inside
                 float distance_this = distance_buffer_.at(traj_point_idx);
-//                std::cout << distance_this <<", ";
                 if (distance_this > threshold || distance_this >= distance_last_point) {
                     distance_last_point = distance_this;
                     traj_point_last = traj_point;

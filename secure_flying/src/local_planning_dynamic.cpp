@@ -50,7 +50,7 @@ using namespace std;
 const double resolution = 0.1;
 const double trunc_distance = 0.8;
 
-static const int POW = 7;
+static const int POW = 6;
 static const int N = (1 << POW);
 
 const float CAL_DURATION = 0.050f; // 20Hz
@@ -66,7 +66,9 @@ const float HEAD_BUFFER_HIT_INCREASE = 0.4f;
 const float HEAD_BUFFER_MISS_DECREASE_STANDARD_V = 0.05f; // Miss add value when velocity is 1m/s
 const float HEAD_BUFFER_MISS_DECREASE_MIN = 0.03f;
 
-float MAX_V = 1.0f;
+float MAX_V_XY = 1.f;
+float MAX_V_Z_UP = 1.f;
+float MAX_V_Z_DOWN = 0.5f;
 float MAX_A = 1.5f;
 float HEIGHT_LIMIT = 2.f;
 float XY_LIMIT = 2.5f;
@@ -348,6 +350,13 @@ void cloudCallback(const control_msgs::JointControllerStateConstPtr &motor_msg, 
         motor_yaw = motor_msg->process_value - init_head_yaw; // + PI_2?? //start with zero, original z for motor is down. now turn to ENU coordinate. Head forward is PI/2 ???????????
         motor_yaw_rate = 0.0;
 
+        while(motor_yaw > PI){
+            motor_yaw -= PIx2;
+        }
+        while(motor_yaw < -PI){
+            motor_yaw += PIx2;
+        }
+
         geometry_msgs::Point32 real_motor_pv;
         real_motor_pv.x = motor_yaw;
         real_motor_pv.y = motor_yaw_rate;
@@ -358,7 +367,7 @@ void cloudCallback(const control_msgs::JointControllerStateConstPtr &motor_msg, 
 
     /*** For cloud ***/
    // ROS_INFO("Received Point Cloud!");
-//    _data_input_time = ros::Time::now();
+   _data_input_time = ros::Time::now();
 
     Eigen::Quaternionf quad_sychronized;
 
@@ -369,7 +378,7 @@ void cloudCallback(const control_msgs::JointControllerStateConstPtr &motor_msg, 
             double time_stamp_att = sim_att_timestamp_queue.front();
             if(time_stamp_att >= cloud->header.stamp.toSec()){
                 quad_sychronized = sim_att_queue.front();
-                std::cout << "cloud mismatch time = " << cloud->header.stamp.toSec() - time_stamp_att << std::endl;
+                ROS_INFO_THROTTLE(3.0, "cloud mismatch time = %d", cloud->header.stamp.toSec() - time_stamp_att);
                 break;
             }
             sim_att_timestamp_queue.pop();
@@ -420,7 +429,7 @@ void cloudCallback(const control_msgs::JointControllerStateConstPtr &motor_msg, 
     pcl::transformPointCloud(*cloud_filtered, *cloud_1, t_c_b);
     pcl::transformPointCloud(*cloud_1, *cloud_2, transform);
 
-//    double elp1 = ros::Time::now().toSec() - _data_input_time.toSec();
+   // double elp1 = ros::Time::now().toSec() - _data_input_time.toSec();
     //std::cout << "Map transfer time = " << elp1 << " s" << std::endl;
 
     // t_c_b is never needed when used in the real world
@@ -483,7 +492,7 @@ void cloudCallback(const control_msgs::JointControllerStateConstPtr &motor_msg, 
 
     /** Remove map points around dynamic objects **/
     Eigen::Vector3f cube_size_to_remove_person;
-    cube_size_to_remove_person << 0.6, 0.6, 2.4;
+    cube_size_to_remove_person << 0.5, 0.5, 2.4;
     for(auto & ob_i : dynamic_objects.result){
         Eigen::Vector3f ob_position;
         ob_position << ob_i.position.x, ob_i.position.y, ob_i.position.z;
@@ -492,14 +501,14 @@ void cloudCallback(const control_msgs::JointControllerStateConstPtr &motor_msg, 
         rrb.removePointCloud(cloud_object_cube, ob_position);
     }
 
-    Eigen::Vector3f cube_size_to_remove_uav;
-    cube_size_to_remove_uav << 0.6, 0.6, 0.5;
-    Eigen::Vector3f uav_position;
-    uav_position << p0(0), p0(1), p0(2);
-    ewok::EuclideanDistanceNormalRingBuffer<POW>::PointCloud cloud_uav_cube;
-    cubePointCloudGenerator(uav_position, cube_size_to_remove_uav, resolution, cloud_uav_cube);
-    rrb.removePointCloud(cloud_uav_cube, uav_position);
-    /** End Remove  **/
+    // Eigen::Vector3f cube_size_to_remove_uav;
+    // cube_size_to_remove_uav << 0.6, 0.6, 0.5;
+    // Eigen::Vector3f uav_position;
+    // uav_position << p0(0), p0(1), p0(2);
+    // ewok::EuclideanDistanceNormalRingBuffer<POW>::PointCloud cloud_uav_cube;
+    // cubePointCloudGenerator(uav_position, cube_size_to_remove_uav, resolution, cloud_uav_cube);
+    // rrb.removePointCloud(cloud_uav_cube, uav_position);
+    // /** End Remove  **/
 
 
     // Calculate distance field consider newly imported points (dynamic points)
@@ -523,12 +532,13 @@ void cloudPubCallback(const ros::TimerEvent& e)
     if(!initialized) return;
 
     /*Obstacle cloud*/
-    pcl::PointCloud<pcl::PointXYZI> cloud;
+    pcl::PointCloud<pcl::PointXYZ> cloud;
     Eigen::Vector3d center;
 
-    std::cout << "before1" << std::endl;
-    rrb.getBufferAllAsCloud(cloud, center);
-    std::cout << "after1" << std::endl;
+    // std::cout << "before1" << std::endl;
+    // rrb.getBufferAllAsCloud(cloud, center);
+    rrb.getBufferAsCloud(cloud, center);
+    // std::cout << "after1" << std::endl;
 
     // convert to ROS message and publish
     sensor_msgs::PointCloud2 cloud2;
@@ -551,7 +561,7 @@ void cloudPubCallback(const ros::TimerEvent& e)
 
 
     /*EDF showing*/
-    std::cout << "before2" << std::endl;
+    // std::cout << "before2" << std::endl;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_edf_field(new pcl::PointCloud<pcl::PointXYZRGB>());
     static double boundary = pow(2.0, POW) * resolution / 2; // Here the boundary is 6.4m
 
@@ -586,7 +596,7 @@ void cloudPubCallback(const ros::TimerEvent& e)
     edf_ros_cloud.header.stamp = ros::Time::now();
     edf_ros_cloud.header.frame_id = "world";
     cloud_edf_pub.publish(edf_ros_cloud);
-    std::cout << "after2" << std::endl;
+    // std::cout << "after2" << std::endl;
 }
 
 /** This function is to generate state to state trajectory **/
@@ -613,7 +623,7 @@ void motion_primitives(Eigen::Vector3d p0, Eigen::Vector3d v0, Eigen::Vector3d a
 
     double j_limit = 5;
     double a_limit = MAX_A;
-    double v_limit = MAX_V;
+    double v_limit = MAX_V_XY;
 
 //    double T1 = fabs(af(0)-a0(0))/j_limit > fabs(af(1)-a0(1))/j_limit ? fabs(af(0)-a0(0))/j_limit : fabs(af(1)-a0(1))/j_limit;
 //    T1 = T1 > fabs(af(2)-a0(2))/j_limit ? T1 : fabs(af(2)-a0(2))/j_limit;
@@ -732,7 +742,13 @@ float mahalanobisDistance3D(Eigen::Vector3f &point, Eigen::Vector3f &distributio
     return sqrt(delt.transpose() * distribution_cov.inverse() * delt);
 }
 
-bool dynmaicObstacleCollisionChecking(Eigen::Vector3f *traj_points, int Num, double threshold) {
+float mahalanobisDistance2D(Eigen::Vector2f &point, Eigen::Vector2f &distribution_avg, Eigen::Matrix2f &distribution_cov)
+{
+    Eigen::Vector2f delt = point - distribution_avg;
+    return sqrt(delt.transpose() * distribution_cov.inverse() * delt);
+}
+
+bool dynmaicObstacleCollisionChecking3D(Eigen::Vector3f *traj_points, int Num, double threshold) {
     for (int i = 0; i < Num; ++i) {
         Eigen::Vector3f traj_point = traj_points[i];
         for(auto & dynamic_obstacle_i : dynamic_objects.result){
@@ -752,6 +768,28 @@ bool dynmaicObstacleCollisionChecking(Eigen::Vector3f *traj_points, int Num, dou
     }
     return true; //pass checking, no collision
 }
+
+bool dynmaicObstacleCollisionChecking2D(Eigen::Vector3f *traj_points, int Num, double threshold) {
+    for (int i = 0; i < Num; ++i) {
+        Eigen::Vector2f traj_point;
+        traj_point << traj_points[i][0], traj_points[i][1];
+        for(auto & dynamic_obstacle_i : dynamic_objects.result){
+            Eigen::Matrix2f distribution_cov = Eigen::Matrix2f::Identity() * dynamic_obstacle_i.sigma;
+            Eigen::Vector2f object_position;
+            //Calculate predicted position
+            object_position << dynamic_obstacle_i.position.x + i*SEND_DURATION*dynamic_obstacle_i.velocity.x, 
+                               dynamic_obstacle_i.position.y + i*SEND_DURATION*dynamic_obstacle_i.velocity.y;
+
+            float mahalanobis_distance = mahalanobisDistance2D(traj_point, object_position, distribution_cov);
+            if(mahalanobis_distance < threshold){
+//                std::cout << "mahalanobis_distance = " << mahalanobis_distance << std::endl;
+                return false;
+            }
+        }
+    }
+    return true; //pass checking, no collision
+}
+
 
 /** Delt yaw calculation. Avoid +=Pi problem **/
 double deltYawAbs(double &yaw1, double &yaw2)
@@ -842,7 +880,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
             Eigen::MatrixXd a;
             Eigen::VectorXd t;
 
-            // Use next desire point to plan is tracking is good, otherwise use a mixed state
+            // Use next desire point to plan if tracking is good, otherwise use a mixed state
             if((send_traj_buffer_p[0] - p0).squaredNorm() < PLAN_INIT_STATE_CHANGE_THRESHOLD){
                 motion_primitives(send_traj_buffer_p[0], send_traj_buffer_v[0], send_traj_buffer_a[0], yaw_init, cost(seq,1),
                                   cost(seq,2), p_goal, cost(seq,3), v_max, SEND_DURATION, p, v, a, t);
@@ -865,10 +903,10 @@ void trajectoryCallback(const ros::TimerEvent& e) {
                 sim_traj[i](2) = (float)p.row(i)(2);
             }
             /// collision cheking for static obtacles first
-            collision_check_pass_flag = rrb.collision_checking_with_fence(sim_traj, Num, pp.collision_threshold_static, HEIGHT_LIMIT, XY_LIMIT); // Obstacle threshold is 0.5 now
+            collision_check_pass_flag = rrb.collision_checking_with_fence(sim_traj, Num, pp.collision_threshold_static, HEIGHT_LIMIT, XY_LIMIT); 
             /// If pass static obtacles collision cheking, then start for collision cheking dynamic obtacles.
             if(collision_check_pass_flag){
-                collision_check_pass_flag = dynmaicObstacleCollisionChecking(sim_traj, Num, pp.collision_threshold_dynamic);
+                collision_check_pass_flag = dynmaicObstacleCollisionChecking2D(sim_traj, Num, pp.collision_threshold_dynamic);
             }
 
             if(collision_check_pass_flag)
@@ -920,7 +958,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
         }
 
         if(!collision_check_pass_flag){  // Safety mode
-            ROS_WARN("No valid trajectory found! Trapped in safety mode!");
+            ROS_WARN_THROTTLE(2.0, "No valid trajectory found! Trapped in safety mode!");
             safe_trajectory_avaliable = false;
             
             // Publish points of stored point to show
@@ -961,7 +999,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
         static double v_direction = 0;
         if(fabs(v0(0)) > 0.05 || fabs(v0(1) > 0.05)){  // if velocity is large, use this cost from velocity direction
             // Give a discount on hp.k_current_v (max) so that when the velocity of the drone is low, the influence of the velocity direction is small.
-            k_current_v =  std::max(std::min(std::max(fabs(v0(0)/MAX_V), fabs(v0(1)/MAX_V)), 1.0), 0.0);
+            k_current_v =  std::max(std::min(std::max(fabs(v0(0)/MAX_V_XY), fabs(v0(1)/MAX_V_XY)), 1.0), 0.0);
             v_direction = atan2(v0(1), v0(0));
         }
         double coefficient_current_v =  k_current_v * (1.0 - _direction_update_buffer(getHeadingSeq(v_direction)));
@@ -1377,8 +1415,9 @@ void trackVelocityPose(float vx_sp, float vy_sp, float vz_sp, float yaw_rate_sp,
     static float kp_yaw = pt.kp_yaw;
     static float p_2_delt_v_max_xy = pt.p_2_delt_v_max_xy;
     static float p_2_delt_v_max_z = pt.p_2_delt_v_max_z;
-    static float max_v_xy = MAX_V;
-    static float max_v_z = MAX_V;
+    static float max_v_xy = MAX_V_XY;
+    static float max_v_z_up = MAX_V_Z_UP;
+    static float max_v_z_down = MAX_V_Z_DOWN;	
     static float max_yaw_rate = pt.max_yaw_rate;
 
     float time_interval = SEND_DURATION;
@@ -1402,8 +1441,11 @@ void trackVelocityPose(float vx_sp, float vy_sp, float vz_sp, float yaw_rate_sp,
 
     limit_to_max(vx_sp, max_v_xy);
     limit_to_max(vy_sp, max_v_xy);
-    limit_to_max(vz_sp, max_v_z);
+    // limit_to_max(vz_sp, max_v_z);
     limit_to_max(yaw_rate_sp, max_yaw_rate);
+
+    if(vz_sp > max_v_z_up) vz_sp = max_v_z_up;
+    else if(vz_sp < -max_v_z_down) vz_sp = -max_v_z_down;
 
     if(!if_in_simulation){
         /*Publish NWU to ENU in real UAV*/
@@ -1446,7 +1488,9 @@ void getParameterList(ros::NodeHandle nh){
     nh.getParam("/local_planning_dynamic/goal_position_x", p_goal(0));
     nh.getParam("/local_planning_dynamic/goal_position_y", p_goal(1));
     nh.getParam("/local_planning_dynamic/goal_position_z", p_goal(2));
-    nh.getParam("/local_planning_dynamic/MAX_V", MAX_V);
+    nh.getParam("/local_planning_dynamic/MAX_V_XY", MAX_V_XY);
+    nh.getParam("/local_planning_dynamic/MAX_V_Z_UP", MAX_V_Z_UP);
+    nh.getParam("/local_planning_dynamic/MAX_V_Z_DOWN", MAX_V_Z_DOWN);
     nh.getParam("/local_planning_dynamic/MAX_A", MAX_A);
     nh.getParam("/local_planning_dynamic/distance_reference_length", pp.d_ref);
     nh.getParam("/local_planning_dynamic/toward_goal_k1_xy", pp.k1_xy);
@@ -1482,7 +1526,7 @@ void getParameterList(ros::NodeHandle nh){
 
     if(if_in_simulation)  ROS_WARN("In simulation mode");
 
-    ROS_INFO("Parameters list reading finished! Goal position is: (%f, %f, %f), MAX Vel is %f", p_goal(0), p_goal(1), p_goal(2), MAX_V);
+    ROS_INFO("Parameters list reading finished! Goal position is: (%f, %f, %f), MAX Vel is %f", p_goal(0), p_goal(1), p_goal(2), MAX_V_XY);
 }
 
 
@@ -1491,9 +1535,8 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "local_planning");
     ros::NodeHandle nh;
 
-//    getParameterList(nh);
-
     setParameters();    /// chg, use parameters defined here
+    getParameterList(nh);
 
     // State parameters initiate
     global_time_now = ros::Time::now().toSec();
@@ -1553,7 +1596,7 @@ int main(int argc, char** argv)
     std::srand((unsigned)time(NULL));
 
     // ringbuffer cloud2
-    cloud2_pub = nh.advertise<sensor_msgs::PointCloud2>("/ring_buffer/cloud_all", 1, true);
+    cloud2_pub = nh.advertise<sensor_msgs::PointCloud2>("/ring_buffer/cloud_ob", 1, true);
     cloud_edf_pub = nh.advertise<sensor_msgs::PointCloud2>("/ring_buffer/edf", 1, true);
     map_center_pub = nh.advertise<geometry_msgs::PointStamped>("/map_center",1,true) ;
 
@@ -1603,11 +1646,11 @@ int main(int argc, char** argv)
         sync_->registerCallback(boost::bind(&cloudCallback, _1, _2));
 
 
-        head_cmd_pub = nh.advertise<std_msgs::Float64>("/iris/joint1_position_controller/command_11111111", 2, true);
+        head_cmd_pub = nh.advertise<std_msgs::Float64>("/iris/joint1_position_controller/command", 2, true);
         if(if_sim_lee_position_controller){
             sim_trajectory_pub = nh.advertise<geometry_msgs::Pose>("/trajectory_setpoint", 2, true);
         }else{
-            cmd_vel_pub = nh.advertise<geometry_msgs::TwistStamped>("/setpoint_velocity/cmd_vel_1111", 2, true);
+            cmd_vel_pub = nh.advertise<geometry_msgs::TwistStamped>("/setpoint_velocity/cmd_vel", 2, true);
         }
 
         randomGoalGenerate();
@@ -1644,7 +1687,9 @@ void setParameters(){
     p_goal(0) = 0.0;
     p_goal(1)=6.0;
     p_goal(2)=0.8;
-    MAX_V = 0.8;
+    MAX_V_XY = 0.8;
+    MAX_V_Z_UP = 0.8;
+    MAX_V_Z_DOWN = 0.4;
     MAX_A = 1.5;
     pp.d_ref = 1.5;
     pp.k1_xy = 2.0;
