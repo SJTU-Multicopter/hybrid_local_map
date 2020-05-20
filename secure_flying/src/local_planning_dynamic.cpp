@@ -77,7 +77,7 @@ double DIRECTION_CHANGE_LEFT_SIZE = 1.5;
 
 float PLAN_INIT_STATE_CHANGE_THRESHOLD = 0.1;
 
-
+bool DIRECTION_AUTO_CHANGE = false;
 
 struct  Path_Planning_Parameters
 {
@@ -228,6 +228,15 @@ double getHeadingYawFromSeq(int seq)
     }
     else{
         return (seq - mid_seq_num) * heading_resolution;
+    }
+}
+
+void correctAngleToPiRange(double &angle){
+    while(angle > M_PI){
+        angle = angle - 2*M_PI;
+    }
+    while(angle < -M_PI){
+        angle = 2*M_PI + angle;
     }
 }
 
@@ -815,6 +824,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
 
         /** Moition primitives **/
         Eigen::Vector3d delt_p = p_goal - p0;
+
         double phi_h = atan2(delt_p(1), delt_p(0)); //% horizental offset angle
         double phi_v = atan2(delt_p(2), sqrt(delt_p(0) * delt_p(0) + delt_p(1) * delt_p(1))); //% vertical offset angle
 
@@ -831,8 +841,10 @@ void trajectoryCallback(const ros::TimerEvent& e) {
                 theta_v = Angle_v(j) + phi_v;  //start from goal position, chg, 2019.8.31
                 int m = i*ANGLE_V_NUM + j; //sequence number
                 // Vectorial angle can never be larger than PI
-                double goal_diff_h = fabs(theta_h-phi_h) > M_PI ? 2*M_PI - fabs(theta_h-phi_h) : theta_h-phi_h;
-                double goal_diff_v = fabs(theta_v-phi_v) > M_PI ? 2*M_PI - fabs(theta_v-phi_v) : theta_v-phi_v;
+                double goal_diff_h = Angle_h(i);
+                double goal_diff_v = Angle_v(j);
+                correctAngleToPiRange(theta_h);
+                correctAngleToPiRange(theta_v);
 
                 cost(m, 0) = pp.k1_xy*goal_diff_h*goal_diff_h + pp.k1_z*goal_diff_v*goal_diff_v +
                         pp.k2_xy*(theta_h-theta_h_last)*(theta_h-theta_h_last) + pp.k2_z*(theta_v-theta_v_last)*(theta_v-theta_v_last);
@@ -855,6 +867,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
                 }
             }
         }
+
 
         //% max velocity is decreased concerning current velocity direction and goal
         //% direction
@@ -903,7 +916,12 @@ void trajectoryCallback(const ros::TimerEvent& e) {
                 sim_traj[i](2) = (float)p.row(i)(2);
             }
             /// collision cheking for static obtacles first
-            collision_check_pass_flag = rrb.collision_checking_with_fence(sim_traj, Num, pp.collision_threshold_static, HEIGHT_LIMIT, XY_LIMIT); 
+            if(DIRECTION_AUTO_CHANGE){
+                collision_check_pass_flag = rrb.collision_checking_with_fence(sim_traj, Num, pp.collision_threshold_static, HEIGHT_LIMIT, XY_LIMIT);
+            }else{
+                collision_check_pass_flag = rrb.collision_checking_no_fence(sim_traj, Num, pp.collision_threshold_static);
+            }
+
             /// If pass static obtacles collision cheking, then start for collision cheking dynamic obtacles.
             if(collision_check_pass_flag){
                 collision_check_pass_flag = dynmaicObstacleCollisionChecking2D(sim_traj, Num, pp.collision_threshold_dynamic);
@@ -1149,7 +1167,7 @@ void positionCallback(const geometry_msgs::PoseStamped& msg)
         state_updating = false;
     }
 
-    if(fabs(p0(1))>DIRECTION_CHANGE_LEFT_SIZE && p0(1)*p_goal(1) > 0){
+    if(fabs(p0(1))>DIRECTION_CHANGE_LEFT_SIZE && p0(1)*p_goal(1) > 0 && DIRECTION_AUTO_CHANGE){
         randomGoalGenerate();
     }
 }
@@ -1297,7 +1315,7 @@ void simPositionVelocityCallback(const nav_msgs::Odometry &msg)
         state_updating = false;
     }
 
-    if(fabs(p0(1))>DIRECTION_CHANGE_LEFT_SIZE && p0(1)*p_goal(1) > 0){
+    if(fabs(p0(1))>DIRECTION_CHANGE_LEFT_SIZE && p0(1)*p_goal(1) > 0 && DIRECTION_AUTO_CHANGE){
         randomGoalGenerate();
     }
 }
@@ -1448,7 +1466,7 @@ void trackVelocityPose(float vx_sp, float vy_sp, float vz_sp, float yaw_rate_sp,
     else if(vz_sp < -max_v_z_down) vz_sp = -max_v_z_down;
 
     if(!if_in_simulation){
-        /*Publish NWU to ENU in real UAV*/
+        /*Publish by NWU to ENU in real UAV*/
         cmd_to_pub.header.stamp = ros::Time::now();
         cmd_to_pub.twist.linear.x = -vy_sp;
         cmd_to_pub.twist.linear.y = vx_sp;
@@ -1456,7 +1474,7 @@ void trackVelocityPose(float vx_sp, float vy_sp, float vz_sp, float yaw_rate_sp,
         cmd_to_pub.twist.angular.z = yaw_rate_sp;
         cmd_vel_pub.publish(cmd_to_pub);
     } else{
-        /*Publish NWU in Simulation */
+        /*Publish by NWU in Simulation */
         cmd_to_pub.header.stamp = ros::Time::now();
         cmd_to_pub.twist.linear.x = vx_sp;
         cmd_to_pub.twist.linear.y = vy_sp;
@@ -1522,7 +1540,7 @@ void getParameterList(ros::NodeHandle nh){
     nh.getParam("/local_planning_dynamic/XY_LIMIT", XY_LIMIT);
     nh.getParam("/local_planning_dynamic/PLAN_INIT_STATE_CHANGE_THRESHOLD", PLAN_INIT_STATE_CHANGE_THRESHOLD);
     nh.getParam("/local_planning_dynamic/DIRECTION_CHANGE_LEFT_SIZE", DIRECTION_CHANGE_LEFT_SIZE);
-
+    nh.getParam("/local_planning_dynamic/DIRECTION_AUTO_CHANGE", DIRECTION_AUTO_CHANGE);
 
     if(if_in_simulation)  ROS_WARN("In simulation mode");
 
@@ -1653,11 +1671,14 @@ int main(int argc, char** argv)
             cmd_vel_pub = nh.advertise<geometry_msgs::TwistStamped>("/setpoint_velocity/cmd_vel", 2, true);
         }
 
-        randomGoalGenerate();
+        if(DIRECTION_AUTO_CHANGE){
+            randomGoalGenerate();
+        }
+        
     }
 
     // timer for publish ringbuffer as pointcloud
-    ros::Timer timer1 = nh.createTimer(ros::Duration(0.2), cloudPubCallback); // RATE 5 Hz to publish
+    ros::Timer timer1 = nh.createTimer(ros::Duration(0.2), cloudPubCallback); // RATE 3 Hz to publish
 
     // timer for trajectory generation
     /// ***** don't excute this callback in data collection, chg
@@ -1721,6 +1742,7 @@ void setParameters(){
     XY_LIMIT = 2.2;
     PLAN_INIT_STATE_CHANGE_THRESHOLD = 0.1;
     DIRECTION_CHANGE_LEFT_SIZE = 1.5;
+    DIRECTION_AUTO_CHANGE = true;
 }
 
 
