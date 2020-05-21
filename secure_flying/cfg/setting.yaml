@@ -18,8 +18,8 @@ DIRECTION_CHANGE_LEFT_SIZE: 1.4
 HEIGHT_LIMIT: 1.8
 XY_LIMIT: 2.2
 distance_reference_length: 1.5  #1.5
-toward_goal_k1_xy: 3.0 #2.0
-toward_goal_k1_z: 3.0  #2.0
+toward_goal_k1_xy: 4.0 #2.0
+toward_goal_k1_z: 4.0  #2.0
 less_variation_k2_xy: 3.0
 less_variation_k2_z: 3.5 
 v_max_at_goal_ori: 0.3 #% 0.3 m/s, just reference for goal velocity, but important
@@ -28,6 +28,8 @@ collision_threshold_static: 0.7
 collision_threshold_dynamic: 0.8
 
 PLAN_INIT_STATE_CHANGE_THRESHOLD: 0.15  #0.15
+
+MAP_DELAY_SECONDS: 0.1
 
 #Parameters for head rotation planning
 k_current_v: 0.8

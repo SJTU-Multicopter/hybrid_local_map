@@ -113,6 +113,7 @@ struct  Position_Tracker_Parameters
     float max_yaw_rate = 1.0;
 }pt;
 
+float MAP_DELAY_SECONDS = 0.05;
 const int point_num_pub = 5; // For the visualization of current planned trajectory
 
 /*** End of Parameters ***/
@@ -501,10 +502,12 @@ void cloudCallback(const control_msgs::JointControllerStateConstPtr &motor_msg, 
 
     /** Remove map points around dynamic objects **/
     Eigen::Vector3f cube_size_to_remove_person;
-    cube_size_to_remove_person << 0.5, 0.5, 2.4;
+    cube_size_to_remove_person << 0.6, 0.6, 2.4;
     for(auto & ob_i : dynamic_objects.result){
         Eigen::Vector3f ob_position;
-        ob_position << ob_i.position.x, ob_i.position.y, ob_i.position.z;
+        ob_position <<  ob_i.position.x - ob_i.velocity.x*MAP_DELAY_SECONDS,  // voxels in map were built slower than the dynamic obstacles were detected
+                        ob_i.position.y - ob_i.velocity.y*MAP_DELAY_SECONDS,
+                        ob_i.position.z - ob_i.velocity.z*MAP_DELAY_SECONDS;
         ewok::EuclideanDistanceNormalRingBuffer<POW>::PointCloud cloud_object_cube;
         cubePointCloudGenerator(ob_position, cube_size_to_remove_person, resolution, cloud_object_cube);
         rrb.removePointCloud(cloud_object_cube, ob_position);
@@ -1541,6 +1544,7 @@ void getParameterList(ros::NodeHandle nh){
     nh.getParam("/local_planning_dynamic/PLAN_INIT_STATE_CHANGE_THRESHOLD", PLAN_INIT_STATE_CHANGE_THRESHOLD);
     nh.getParam("/local_planning_dynamic/DIRECTION_CHANGE_LEFT_SIZE", DIRECTION_CHANGE_LEFT_SIZE);
     nh.getParam("/local_planning_dynamic/DIRECTION_AUTO_CHANGE", DIRECTION_AUTO_CHANGE);
+    nh.getParam("/local_planning_dynamic/MAP_DELAY_SECONDS", MAP_DELAY_SECONDS);
 
     if(if_in_simulation)  ROS_WARN("In simulation mode");
 
@@ -1631,8 +1635,6 @@ int main(int argc, char** argv)
         mode_sub = nh.subscribe("/mavros/state", 1, uavModeCallback);
         position_isolate_sub =  nh.subscribe("/mavros/local_position/pose", 1, positionCallback);
         velocity_isolate_sub = nh.subscribe("/mavros/local_position/velocity_local", 1, velocityCallback);
-//        motor_sub = nh.subscribe("/place_velocity_info", 1, motorCallback);
-//        cloud_sub = nh.subscribe("/camera/depth/color/points", 1, cloudCallback);
 
         typedef message_filters::sync_policies::ApproximateTime<control_msgs::JointControllerState,sensor_msgs::PointCloud2> mapSyncPolicy;
         message_filters::Subscriber<control_msgs::JointControllerState> *motor_sub;
@@ -1643,7 +1645,6 @@ int main(int argc, char** argv)
         message_filters::Synchronizer<mapSyncPolicy>* sync_;
         sync_ = new message_filters::Synchronizer<mapSyncPolicy>(mapSyncPolicy(10), *motor_sub, *cloud_sub);
         sync_->registerCallback(boost::bind(&cloudCallback, _1, _2));
-
 
         head_cmd_pub = nh.advertise<geometry_msgs::Point32>("/gimbal_commands", 2, true); 
         cmd_vel_pub = nh.advertise<geometry_msgs::TwistStamped>("/mavros/setpoint_velocity/cmd_vel", 2, true); 
@@ -1743,6 +1744,7 @@ void setParameters(){
     PLAN_INIT_STATE_CHANGE_THRESHOLD = 0.1;
     DIRECTION_CHANGE_LEFT_SIZE = 1.5;
     DIRECTION_AUTO_CHANGE = true;
+    MAP_DELAY_SECONDS = 0.05;
 }
 
 
