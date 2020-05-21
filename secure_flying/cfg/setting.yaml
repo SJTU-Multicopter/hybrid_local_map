@@ -29,7 +29,7 @@ collision_threshold_dynamic: 0.8
 
 PLAN_INIT_STATE_CHANGE_THRESHOLD: 0.15  #0.15
 
-MAP_DELAY_SECONDS: 0.1
+MAP_DELAY_SECONDS: 0.05
 
 #Parameters for head rotation planning
 k_current_v: 0.8

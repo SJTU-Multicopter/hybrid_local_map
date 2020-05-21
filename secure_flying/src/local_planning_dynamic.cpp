@@ -513,13 +513,13 @@ void cloudCallback(const control_msgs::JointControllerStateConstPtr &motor_msg, 
         rrb.removePointCloud(cloud_object_cube, ob_position);
     }
 
-    // Eigen::Vector3f cube_size_to_remove_uav;
-    // cube_size_to_remove_uav << 0.6, 0.6, 0.5;
-    // Eigen::Vector3f uav_position;
-    // uav_position << p0(0), p0(1), p0(2);
-    // ewok::EuclideanDistanceNormalRingBuffer<POW>::PointCloud cloud_uav_cube;
-    // cubePointCloudGenerator(uav_position, cube_size_to_remove_uav, resolution, cloud_uav_cube);
-    // rrb.removePointCloud(cloud_uav_cube, uav_position);
+     Eigen::Vector3f cube_size_to_remove_uav;
+     cube_size_to_remove_uav << 0.6, 0.6, 0.6;
+     Eigen::Vector3f uav_position;
+     uav_position << p0(0), p0(1), p0(2);
+     ewok::EuclideanDistanceNormalRingBuffer<POW>::PointCloud cloud_uav_cube;
+     cubePointCloudGenerator(uav_position, cube_size_to_remove_uav, resolution, cloud_uav_cube);
+     rrb.removePointCloud(cloud_uav_cube, uav_position);
     // /** End Remove  **/
 
 
