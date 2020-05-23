@@ -88,10 +88,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d039b343-f42a-46d4-a044-a76654ebc463" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/../ewok_ring_buffer/include/ewok/raycast_ring_buffer.h" beforeDir="false" afterPath="$PROJECT_DIR$/../ewok_ring_buffer/include/ewok/raycast_ring_buffer.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cfg/setting.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/cfg/setting.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/local_planning_dynamic.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/local_planning_dynamic.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -653,7 +650,7 @@
       <workItem from="1587996653475" duration="608000" />
       <workItem from="1589882302582" duration="9903000" />
       <workItem from="1589944117545" duration="1546000" />
-      <workItem from="1589952737334" duration="5419000" />
+      <workItem from="1589952737334" duration="6367000" />
     </task>
     <servers />
   </component>
@@ -738,6 +735,16 @@
           <url>file://$PROJECT_DIR$/../../yolo_ros_real_pose/script/yolo_ros_node.py</url>
           <line>16</line>
           <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
+          <url>file://$PROJECT_DIR$/src/local_planning_dynamic.cpp</url>
+          <line>507</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
+          <url>file://$PROJECT_DIR$/src/local_planning_dynamic.cpp</url>
+          <line>508</line>
+          <option name="timeStamp" value="3" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

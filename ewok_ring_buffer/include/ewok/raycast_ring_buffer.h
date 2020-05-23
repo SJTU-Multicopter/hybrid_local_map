@@ -156,7 +156,7 @@ class RaycastRingBuffer {
 
         if (!occupancy_buffer_.insideVolume( //insideVolume will subtract offset and check if the seq is larger than N
                 origin_idx)) {
-            std::cout <<"Origin outside of volume. Skipping pointcloud. removePointCloudDynamic\n";
+            // std::cout <<"Origin outside of volume. Skipping pointcloud. removePointCloudDynamic\n";
             return;
         }
 
@@ -192,7 +192,7 @@ class RaycastRingBuffer {
 
       if (!occupancy_buffer_.insideVolume( //insideVolume will subtract offset and check if the seq is larger than N
               origin_idx)) {
-          std::cout <<"Origin outside of volume. Skipping pointcloud. removePointCloudDynamic\n";
+          // std::cout <<"Origin outside of volume. Skipping pointcloud. removePointCloudDynamic\n";
           return;
       }
 

@@ -1,0 +1,10 @@
+<launch>
+	<node pkg="secure_flying" name="local_planning_dynamic" type="local_planning_dynamic" output="screen">
+		<rosparam 
+	        file="$(find secure_flying)/cfg/setting.yaml"
+	        command="load" 
+		/> 
+	</node>
+	<node pkg="wifi_transmitter" name="multi_thread_server_gg" type="multi_thread_server_gg" output="screen" respawn="true">
+	</node>
+</launch>

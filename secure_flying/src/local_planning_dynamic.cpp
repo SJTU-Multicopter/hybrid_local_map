@@ -131,7 +131,7 @@ ros::Publisher sim_trajectory_pub; // add on 7 Jan. 2020
 
 double x_centre, y_centre, z_centre;
 
-bool if_in_simulation = true;
+bool if_in_simulation = false;
 
 bool offboard_ready = false;
 bool objects_updated = false;
@@ -142,7 +142,7 @@ bool safe_trajectory_avaliable = true;
 bool use_position_global_time = false;
 bool if_plan_vertical_path = true;
 bool if_sim_lee_position_controller = false;
-bool if_fallback_enable = true;
+bool if_flyback_enable = true;
 
 hist_kalman_mot::ObjectsInTracking dynamic_objects;
 
@@ -357,7 +357,11 @@ void cloudCallback(const control_msgs::JointControllerStateConstPtr &motor_msg, 
     }
     else
     {
-        motor_yaw = motor_msg->process_value - init_head_yaw; // + PI_2?? //start with zero, original z for motor is down. now turn to ENU coordinate. Head forward is PI/2 ???????????
+        if(!if_in_simulation){  //real world
+            motor_yaw = -motor_msg->process_value + init_head_yaw; // + PI_2?? //start with zero, original z for motor is down. now turn to ENU coordinate. Head forward is PI/2 ???????????
+        }else{
+            motor_yaw = motor_msg->process_value - init_head_yaw;
+        }
         motor_yaw_rate = 0.0;
 
         while(motor_yaw > PI){
@@ -1104,6 +1108,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
 
         /** End of visualization **/
         sendMotorCommands(yaw_to_send); //send to motor
+        ROS_INFO_THROTTLE(2.0, "yaw to send = %f", yaw_to_send);
 
         last_head_yaw_plan = yaw_to_send;
     }
@@ -1399,16 +1404,17 @@ void uavModeCallback(const mavros_msgs::State &msg)
 void sendMotorCommands(double yaw) // Range[-Pi, Pi], [0, 1]
 {
     /** Set a limitation **/
-     double delt_yaw = yaw - motor_yaw;
-     if(fabs(delt_yaw) > head_max_yaw_delt){
-         yaw = motor_yaw + head_max_yaw_delt * delt_yaw / fabs(delt_yaw);
-     }
+    double delt_yaw = yaw - motor_yaw;
+    if(fabs(delt_yaw) > head_max_yaw_delt){
+        yaw = motor_yaw + head_max_yaw_delt * delt_yaw / fabs(delt_yaw);
+    }
 
     if(!if_in_simulation){
         static geometry_msgs::Point32 head_cmd;
         head_cmd.x = -yaw + init_head_yaw; 
         head_cmd.y = motor_velocity_set;
         head_cmd_pub.publish(head_cmd);
+        ROS_INFO_THROTTLE(2.0, "sended yaw=%f, corrected yaw=%f, motor_yaw=%f", yaw, head_cmd.x, motor_yaw);
     }else{
         static std_msgs::Float64 head_cmd;
         head_cmd.data = yaw - init_head_yaw;  
@@ -1538,7 +1544,7 @@ void getParameterList(ros::NodeHandle nh){
     nh.getParam("/local_planning_dynamic/motor_velocity_set", motor_velocity_set);
     nh.getParam("/local_planning_dynamic/if_plan_vertical_path", if_plan_vertical_path);
     nh.getParam("/local_planning_dynamic/if_in_simulation", if_in_simulation);
-    nh.getParam("/local_planning_dynamic/if_fallback_enable", if_fallback_enable);
+    nh.getParam("/local_planning_dynamic/if_flyback_enable", if_flyback_enable);
     nh.getParam("/local_planning_dynamic/HEIGHT_LIMIT", HEIGHT_LIMIT);
     nh.getParam("/local_planning_dynamic/XY_LIMIT", XY_LIMIT);
     nh.getParam("/local_planning_dynamic/PLAN_INIT_STATE_CHANGE_THRESHOLD", PLAN_INIT_STATE_CHANGE_THRESHOLD);
@@ -1573,7 +1579,7 @@ int main(int argc, char** argv)
     Fov_half << 35, 20;
     // Horizontal angles larger than 90 degree are deleted
     //Angle_h << -90, -70, -50, -30, -20, -10, 0, 10, 20, 30, 50, 70, 90;
-    if(if_fallback_enable){
+    if(if_flyback_enable){
         Angle_h << -130, -90, -75, -60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60, 75, 90, 130, 180;
     }else{
         Angle_h << -90, -80, -70, -60, -50, -40, -30, -20, -10, 0, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90;
@@ -1738,7 +1744,7 @@ void setParameters(){
     motor_velocity_set = 40;
     if_plan_vertical_path = true;
     if_in_simulation = true;
-    if_fallback_enable = true;
+    if_flyback_enable = true;
     HEIGHT_LIMIT = 1.8;
     XY_LIMIT = 2.2;
     PLAN_INIT_STATE_CHANGE_THRESHOLD = 0.1;

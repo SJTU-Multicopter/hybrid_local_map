@@ -188,7 +188,6 @@ void commandsCallback(const geometry_msgs::Point32& msg)
 	control_commands[1] = msg.y; //velocity
 	control_commands[2] = msg.z;  //vacancy
 	//ROS_INFO("test%f",control_commands[0]);
-
 }
 
 int main (int argc, char** argv) 

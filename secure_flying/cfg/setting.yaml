@@ -1,5 +1,5 @@
 # Simulation switch
-if_in_simulation: true
+if_in_simulation: false
 
 # Parameters for initial goal position
 goal_position_x: 0.0  #0.0
@@ -8,7 +8,7 @@ goal_position_z: 1.0 #0.8
 
 # Parameters for UAV path planning
 if_plan_vertical_path: true
-if_fallback_enable: true
+if_flyback_enable: true
 MAX_V_XY: 0.8 # 0.8 multiply 1.414 for xy combined limitation
 MAX_V_Z_UP: 0.8
 MAX_V_Z_DOWN: 0.4
