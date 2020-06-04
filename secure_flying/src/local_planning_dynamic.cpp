@@ -146,8 +146,9 @@ bool if_flyback_enable = true;
 
 hist_kalman_mot::ObjectsInTracking dynamic_objects;
 
-std::queue<double> sim_att_timestamp_queue;
-std::queue<Eigen::Quaternionf> sim_att_queue;
+std::queue<double> pose_timestamp_queue;
+std::queue<Eigen::Quaternionf> att_queue;
+std::queue<Eigen::Vector3d> pos_queue;
 
 /****** Global variables for path planning ******/
 ros::Time _data_input_time;
@@ -380,25 +381,25 @@ void cloudCallback(const control_msgs::JointControllerStateConstPtr &motor_msg, 
     }
 
     /*** For cloud ***/
-   // ROS_INFO("Received Point Cloud!");
-   _data_input_time = ros::Time::now();
+    // ROS_INFO("Received Point Cloud!");
+    _data_input_time = ros::Time::now();
 
-    Eigen::Quaternionf quad_sychronized;
+    Eigen::Quaternionf quad_sychronized = quad;  //initialze in case no point in the queue satisfy
+    Eigen::Vector3d current_position = p0;
 
-    if(!if_in_simulation){
-        quad_sychronized = quad;
-    } else{
-        while(!sim_att_timestamp_queue.empty()){
-            double time_stamp_att = sim_att_timestamp_queue.front();
-            if(time_stamp_att >= cloud->header.stamp.toSec()){
-                quad_sychronized = sim_att_queue.front();
-                ROS_INFO_THROTTLE(3.0, "cloud mismatch time = %d", cloud->header.stamp.toSec() - time_stamp_att);
-                break;
-            }
-            sim_att_timestamp_queue.pop();
-            sim_att_queue.pop();
+    while(!pose_timestamp_queue.empty()){   //Sychronize pose by queue
+        double time_stamp_pose = pose_timestamp_queue.front();
+        if(time_stamp_pose >= cloud->header.stamp.toSec()){
+            quad_sychronized = att_queue.front();
+            current_position = pos_queue.front();
+            ROS_INFO_THROTTLE(3.0, "cloud mismatch time = %d", cloud->header.stamp.toSec() - time_stamp_pose);
+            break;
         }
+        pose_timestamp_queue.pop();
+        att_queue.pop();
+        pos_queue.pop();
     }
+
 
     // Add the rotation of head
     Eigen::Quaternionf axis_motor;
@@ -1108,7 +1109,6 @@ void trajectoryCallback(const ros::TimerEvent& e) {
 
         /** End of visualization **/
         sendMotorCommands(yaw_to_send); //send to motor
-        ROS_INFO_THROTTLE(2.0, "yaw to send = %f", yaw_to_send);
 
         last_head_yaw_plan = yaw_to_send;
     }
@@ -1169,6 +1169,13 @@ void positionCallback(const geometry_msgs::PoseStamped& msg)
         axis.y() = axis.y() * sin(-PI_2/2.0);
         axis.z() = axis.z() * sin(-PI_2/2.0);
         quad = quad * axis;
+
+        // Queue for synchronization
+        pose_timestamp_queue.push(msg.header.stamp.toSec());
+        pos_queue.push(p0);
+        att_queue.push(quad);
+
+
         /// Update yaw0 here, should be among [-PI, PI] 
         yaw0 = atan2(2*(quad.w()*quad.z()+quad.x()*quad.y()), 1-2*(quad.z()*quad.z()+quad.y()*quad.y()));
 
@@ -1226,7 +1233,7 @@ void velocityCallback(const geometry_msgs::TwistStamped& msg)
 }
 
 default_random_engine random_generator;
-uniform_real_distribution<double> x_distribution(-2, 2.0);
+uniform_real_distribution<double> x_distribution(-1.3, 1.3);
 uniform_real_distribution<double> z_distribution(0.7, 1.5);
 void randomGoalGenerate()
 {
@@ -1278,8 +1285,9 @@ void simPositionVelocityCallback(const nav_msgs::Odometry &msg)
 //        quad.z() = msg.pose.pose.orientation.z;
 //        quad.w() = msg.pose.pose.orientation.w;
 
-        sim_att_timestamp_queue.push(msg.header.stamp.toSec());
-        sim_att_queue.push(quad);
+        pose_timestamp_queue.push(msg.header.stamp.toSec());
+        pos_queue.push(p0);
+        att_queue.push(quad);
 
         /// Update yaw0 here, should be among [-PI, PI] 
         yaw0 = atan2(2*(quad.w()*quad.z()+quad.x()*quad.y()), 1-2*(quad.z()*quad.z()+quad.y()*quad.y()));
@@ -1414,7 +1422,6 @@ void sendMotorCommands(double yaw) // Range[-Pi, Pi], [0, 1]
         head_cmd.x = -yaw + init_head_yaw; 
         head_cmd.y = motor_velocity_set;
         head_cmd_pub.publish(head_cmd);
-        ROS_INFO_THROTTLE(2.0, "sended yaw=%f, corrected yaw=%f, motor_yaw=%f", yaw, head_cmd.x, motor_yaw);
     }else{
         static std_msgs::Float64 head_cmd;
         head_cmd.data = yaw - init_head_yaw;  
