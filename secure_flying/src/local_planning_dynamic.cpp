@@ -689,6 +689,8 @@ void motion_primitives(Eigen::Vector3d p0, Eigen::Vector3d v0, Eigen::Vector3d a
 /* Publish markers to show the path in rviz */
 void marker_publish(Eigen::MatrixXd &Points)
 {
+    if(!target_given){ return;}
+
     visualization_msgs::Marker points, goal_strip;
     goal_strip.header.frame_id = points.header.frame_id = "world";
     goal_strip.header.stamp = points.header.stamp = ros::Time::now();
@@ -698,7 +700,6 @@ void marker_publish(Eigen::MatrixXd &Points)
     goal_strip.id = 0;
     goal_strip.type = visualization_msgs::Marker::LINE_STRIP;
     points.type = visualization_msgs::Marker::POINTS;
-
 
     // Line width
     points.scale.x = 0.1;
@@ -765,8 +766,13 @@ float mahalanobisDistance2D(Eigen::Vector2f &point, Eigen::Vector2f &distributio
 }
 
 bool dynmaicObstacleCollisionChecking3D(Eigen::Vector3f *traj_points, int Num, double threshold) {
+    if(dynamic_objects.result.size() == 0) return true;
+
+    float last_distance = 0;
     for (int i = 0; i < Num; ++i) {
         Eigen::Vector3f traj_point = traj_points[i];
+        std::vector<float> distances_to_objects;
+
         for(auto & dynamic_obstacle_i : dynamic_objects.result){
             Eigen::Matrix3f distribution_cov = Eigen::Matrix3f::Identity() * dynamic_obstacle_i.sigma;
             Eigen::Vector3f object_position;
@@ -776,19 +782,27 @@ bool dynmaicObstacleCollisionChecking3D(Eigen::Vector3f *traj_points, int Num, d
                                dynamic_obstacle_i.position.z + i*SEND_DURATION*dynamic_obstacle_i.velocity.z;
 
             float mahalanobis_distance = mahalanobisDistance3D(traj_point, object_position, distribution_cov);
-            if(mahalanobis_distance < threshold){
-//                std::cout << "mahalanobis_distance = " << mahalanobis_distance << std::endl;
-                return false;
-            }
+            distances_to_objects.push_back(mahalanobis_distance);
         }
+
+        float min_distance = *std::min_element(std::begin(distances_to_objects), std::end(distances_to_objects));
+        if(min_distance < threshold && min_distance < last_distance){
+            return false;
+        }
+        last_distance = min_distance;
     }
     return true; //pass checking, no collision
 }
 
 bool dynmaicObstacleCollisionChecking2D(Eigen::Vector3f *traj_points, int Num, double threshold) {
+    if(dynamic_objects.result.size() == 0) return true;
+
+    float last_distance = 0;
     for (int i = 0; i < Num; ++i) {
         Eigen::Vector2f traj_point;
         traj_point << traj_points[i][0], traj_points[i][1];
+        std::vector<float> distances_to_objects;
+
         for(auto & dynamic_obstacle_i : dynamic_objects.result){
             Eigen::Matrix2f distribution_cov = Eigen::Matrix2f::Identity() * dynamic_obstacle_i.sigma;
             Eigen::Vector2f object_position;
@@ -797,11 +811,13 @@ bool dynmaicObstacleCollisionChecking2D(Eigen::Vector3f *traj_points, int Num, d
                                dynamic_obstacle_i.position.y + i*SEND_DURATION*dynamic_obstacle_i.velocity.y;
 
             float mahalanobis_distance = mahalanobisDistance2D(traj_point, object_position, distribution_cov);
-            if(mahalanobis_distance < threshold){
-//                std::cout << "mahalanobis_distance = " << mahalanobis_distance << std::endl;
-                return false;
-            }
+            distances_to_objects.push_back(mahalanobis_distance);
         }
+        float min_distance = *std::min_element(std::begin(distances_to_objects), std::end(distances_to_objects));
+        if(min_distance < threshold && min_distance < last_distance){
+            return false;
+        }
+        last_distance = min_distance;
     }
     return true; //pass checking, no collision
 }
@@ -1281,10 +1297,6 @@ void simPositionVelocityCallback(const nav_msgs::Odometry &msg)
         quad.y() = msg.pose.pose.orientation.y;
         quad.z() = msg.pose.pose.orientation.z;
         quad.w() = msg.pose.pose.orientation.w;
-//        quad.y() = msg.pose.pose.orientation.x;
-//        quad.x() = -msg.pose.pose.orientation.y;
-//        quad.z() = msg.pose.pose.orientation.z;
-//        quad.w() = msg.pose.pose.orientation.w;
 
         sim_att_timestamp_queue.push(msg.header.stamp.toSec());
         sim_att_queue.push(quad);
@@ -1585,8 +1597,8 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "local_planning");
     ros::NodeHandle nh;
 
-    setParameters();    /// chg, use parameters defined here
-//    getParameterList(nh);
+    setParameters();    /// chg, use parameters defined here if not using a launch file
+    getParameterList(nh);  /// If use a launch file, parameters will be read here.
 
     // State parameters initiate
     global_time_now = ros::Time::now().toSec();
