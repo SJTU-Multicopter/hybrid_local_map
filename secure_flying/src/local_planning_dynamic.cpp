@@ -38,6 +38,7 @@
 #include <control_msgs/JointControllerState.h>
 #include <std_msgs/Float64.h>
 #include <queue>
+#include <sensor_msgs/Joy.h>
 
 using namespace message_filters;
 using namespace std;
@@ -132,6 +133,9 @@ ros::Publisher sim_trajectory_pub; // add on 7 Jan. 2020
 double x_centre, y_centre, z_centre;
 
 bool if_in_simulation = true;
+
+bool global_start_flag = false;
+bool target_given = false;
 
 bool offboard_ready = false;
 bool objects_updated = false;
@@ -816,6 +820,7 @@ double deltYawAbs(double &yaw1, double &yaw2)
 
 /** This is the function to generate the collision-free path, which is trigered by a timer defined in main function. **/
 void trajectoryCallback(const ros::TimerEvent& e) {
+
     /** Generate trajectory for uav first***/
     double theta_h_chosen;
 
@@ -997,7 +1002,9 @@ void trajectoryCallback(const ros::TimerEvent& e) {
         state_locked = false;
     }
 
-    setPointSendCallback();  /// Send control setpoint
+    if(global_start_flag){
+        setPointSendCallback();  /// Send control setpoint
+    }
 
     /** Generate trajectory for rotating head **/
     static double last_head_yaw_plan = 0.0;
@@ -1052,7 +1059,12 @@ void trajectoryCallback(const ros::TimerEvent& e) {
 
             double cost_update_degree = hp.k_common_update * _direction_update_buffer(i);
 
-            double cost_planned_direction = hp.k_planned_direction  * coefficient_planned_dir * (theta_h_chosen-head_yaw_plan_temp) * (theta_h_chosen-head_yaw_plan_temp);
+            double cost_planned_direction = 0.0;
+
+            if(target_given){
+                cost_planned_direction = hp.k_planned_direction  * coefficient_planned_dir * (theta_h_chosen-head_yaw_plan_temp) * (theta_h_chosen-head_yaw_plan_temp);
+            }
+
             double cost_head_fluctuation = hp.k_v_fluctuation * (head_yaw_plan_temp - last_head_yaw_plan) * (head_yaw_plan_temp - last_head_yaw_plan);
 
             double cost_dynamic_objects = 0.0;
@@ -1103,6 +1115,7 @@ void trajectoryCallback(const ros::TimerEvent& e) {
         }
 
         /** End of visualization **/
+//        ROS_INFO("yaw_to_send = %f", yaw_to_send);
         sendMotorCommands(yaw_to_send); //send to motor
 
         last_head_yaw_plan = yaw_to_send;
@@ -1399,17 +1412,18 @@ void uavModeCallback(const mavros_msgs::State &msg)
 void sendMotorCommands(double yaw) // Range[-Pi, Pi], [0, 1]
 {
     /** Set a limitation **/
-     double delt_yaw = yaw - motor_yaw;
-     if(fabs(delt_yaw) > head_max_yaw_delt){
-         yaw = motor_yaw + head_max_yaw_delt * delt_yaw / fabs(delt_yaw);
-     }
-
     if(!if_in_simulation){
+        double delt_yaw = yaw - motor_yaw;
+        if(fabs(delt_yaw) > head_max_yaw_delt){
+            yaw = motor_yaw + head_max_yaw_delt * delt_yaw / fabs(delt_yaw);
+        }
+
         static geometry_msgs::Point32 head_cmd;
         head_cmd.x = -yaw + init_head_yaw; 
         head_cmd.y = motor_velocity_set;
         head_cmd_pub.publish(head_cmd);
     }else{
+//        ROS_INFO("init_head_yaw=%f", init_head_yaw);
         static std_msgs::Float64 head_cmd;
         head_cmd.data = yaw - init_head_yaw;  
         head_cmd_pub.publish(head_cmd);
@@ -1552,13 +1566,27 @@ void getParameterList(ros::NodeHandle nh){
 }
 
 
+void joyCallback(const sensor_msgs::Joy &msg)
+{
+    if(msg.buttons[2] == 1){
+        global_start_flag = true;
+        ROS_WARN("Auto flight started!!!!");
+    }
+
+    if(msg.buttons[1] == 1){
+        target_given = true;
+        ROS_WARN("Target is given!!!!");
+    }
+    
+}
+
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "local_planning");
     ros::NodeHandle nh;
 
     setParameters();    /// chg, use parameters defined here
-    getParameterList(nh);
+//    getParameterList(nh);
 
     // State parameters initiate
     global_time_now = ros::Time::now().toSec();
@@ -1628,7 +1656,8 @@ int main(int argc, char** argv)
     motor_pub = nh.advertise<geometry_msgs::Point32>("/place_velocity_info_corrected", 1, true); 
     ros::Subscriber dynamic_objects_sub = nh.subscribe("/mot/objects_in_tracking", 1, dynamicObjectsCallback);
 
-    ros::Subscriber mode_sub, position_isolate_sub, velocity_isolate_sub, motor_sub, cloud_sub, sim_odom_isolate_sub;
+    ros::Subscriber mode_sub, position_isolate_sub, velocity_isolate_sub, motor_sub, cloud_sub, sim_odom_isolate_sub, joy_sub_;
+
 
     /*** For real world test***/
     if(!if_in_simulation){
@@ -1672,10 +1701,11 @@ int main(int argc, char** argv)
             cmd_vel_pub = nh.advertise<geometry_msgs::TwistStamped>("/setpoint_velocity/cmd_vel", 2, true);
         }
 
-        if(DIRECTION_AUTO_CHANGE){
-            randomGoalGenerate();
-        }
-        
+//        if(DIRECTION_AUTO_CHANGE){
+//            randomGoalGenerate();
+//        }
+
+        joy_sub_ = nh.subscribe("/joy", 10, joyCallback);
     }
 
     // timer for publish ringbuffer as pointcloud
@@ -1706,9 +1736,9 @@ int main(int argc, char** argv)
 
 
 void setParameters(){
-    p_goal(0) = 0.0;
-    p_goal(1)=6.0;
-    p_goal(2)=0.8;
+    p_goal(0) = 1000.0;
+    p_goal(1)=0.0;
+    p_goal(2)=1.0;
     MAX_V_XY = 0.8;
     MAX_V_Z_UP = 0.8;
     MAX_V_Z_DOWN = 0.4;
@@ -1723,9 +1753,9 @@ void setParameters(){
     pp.collision_threshold_dynamic = 0.8;
     hp.k_current_v = 0.7;
     hp.k_planned_direction = 0.2;
-    hp.k_v_fluctuation = 0.4;
-    hp.k_dynamic_objects = 1.0;
-    hp.k_common_update = 0.1;
+    hp.k_v_fluctuation = 0.5;
+    hp.k_dynamic_objects = 1.1;
+    hp.k_common_update = 0.12;
     if_publish_panel_arrays = true;
     CAMERA_H_FOV = 62;
     pt.kp_xy = 0.18;
@@ -1736,13 +1766,13 @@ void setParameters(){
     pt.max_yaw_rate = 1.0;
     head_max_yaw_delt = 0.5;
     motor_velocity_set = 40;
-    if_plan_vertical_path = true;
+    if_plan_vertical_path = false;
     if_in_simulation = true;
     if_fallback_enable = true;
-    HEIGHT_LIMIT = 1.8;
-    XY_LIMIT = 2.2;
+    HEIGHT_LIMIT = 2.0;
+    XY_LIMIT = 200;
     PLAN_INIT_STATE_CHANGE_THRESHOLD = 0.1;
-    DIRECTION_CHANGE_LEFT_SIZE = 1.5;
+    DIRECTION_CHANGE_LEFT_SIZE = 150;
     DIRECTION_AUTO_CHANGE = true;
     MAP_DELAY_SECONDS = 0.05;
 }
