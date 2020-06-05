@@ -33,9 +33,6 @@ include_directories(${PROJECT_SOURCE_DIR}/../ewok_poly_spline/include)
 add_executable(local_planning_dynamic src/local_planning_dynamic.cpp)
 target_link_libraries(local_planning_dynamic ${PCL_LIBRARIES} ${catkin_LIBRARIES})
 
-add_executable(local_planning_dynamic_synchronization src/local_planning_dynamic_synchronization.cpp)
-target_link_libraries(local_planning_dynamic_synchronization ${PCL_LIBRARIES} ${catkin_LIBRARIES})
-
 add_executable(display_costs src/display_costs.cpp)
 target_link_libraries(display_costs ${OpenCV_LIBS} ${catkin_LIBRARIES})
 

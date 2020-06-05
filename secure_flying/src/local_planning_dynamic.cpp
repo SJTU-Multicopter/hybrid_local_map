@@ -766,8 +766,13 @@ float mahalanobisDistance2D(Eigen::Vector2f &point, Eigen::Vector2f &distributio
 }
 
 bool dynmaicObstacleCollisionChecking3D(Eigen::Vector3f *traj_points, int Num, double threshold) {
+    if(dynamic_objects.result.size() == 0) return true;
+
+    float last_distance = 0;
     for (int i = 0; i < Num; ++i) {
         Eigen::Vector3f traj_point = traj_points[i];
+        std::vector<float> distances_to_objects;
+
         for(auto & dynamic_obstacle_i : dynamic_objects.result){
             Eigen::Matrix3f distribution_cov = Eigen::Matrix3f::Identity() * dynamic_obstacle_i.sigma;
             Eigen::Vector3f object_position;
@@ -777,19 +782,27 @@ bool dynmaicObstacleCollisionChecking3D(Eigen::Vector3f *traj_points, int Num, d
                                dynamic_obstacle_i.position.z + i*SEND_DURATION*dynamic_obstacle_i.velocity.z;
 
             float mahalanobis_distance = mahalanobisDistance3D(traj_point, object_position, distribution_cov);
-            if(mahalanobis_distance < threshold){
-//                std::cout << "mahalanobis_distance = " << mahalanobis_distance << std::endl;
-                return false;
-            }
+            distances_to_objects.push_back(mahalanobis_distance);
         }
+
+        float min_distance = *std::min_element(std::begin(distances_to_objects), std::end(distances_to_objects));
+        if(min_distance < threshold && min_distance < last_distance){
+            return false;
+        }
+        last_distance = min_distance;
     }
     return true; //pass checking, no collision
 }
 
 bool dynmaicObstacleCollisionChecking2D(Eigen::Vector3f *traj_points, int Num, double threshold) {
+    if(dynamic_objects.result.size() == 0) return true;
+
+    float last_distance = 0;
     for (int i = 0; i < Num; ++i) {
         Eigen::Vector2f traj_point;
         traj_point << traj_points[i][0], traj_points[i][1];
+        std::vector<float> distances_to_objects;
+
         for(auto & dynamic_obstacle_i : dynamic_objects.result){
             Eigen::Matrix2f distribution_cov = Eigen::Matrix2f::Identity() * dynamic_obstacle_i.sigma;
             Eigen::Vector2f object_position;
@@ -798,11 +811,13 @@ bool dynmaicObstacleCollisionChecking2D(Eigen::Vector3f *traj_points, int Num, d
                                dynamic_obstacle_i.position.y + i*SEND_DURATION*dynamic_obstacle_i.velocity.y;
 
             float mahalanobis_distance = mahalanobisDistance2D(traj_point, object_position, distribution_cov);
-            if(mahalanobis_distance < threshold){
-//                std::cout << "mahalanobis_distance = " << mahalanobis_distance << std::endl;
-                return false;
-            }
+            distances_to_objects.push_back(mahalanobis_distance);
         }
+        float min_distance = *std::min_element(std::begin(distances_to_objects), std::end(distances_to_objects));
+        if(min_distance < threshold && min_distance < last_distance){
+            return false;
+        }
+        last_distance = min_distance;
     }
     return true; //pass checking, no collision
 }
