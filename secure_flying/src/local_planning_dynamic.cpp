@@ -1189,6 +1189,12 @@ void positionCallback(const geometry_msgs::PoseStamped& msg)
         pose_timestamp_queue.push(msg.header.stamp.toSec());
         pos_queue.push(p0);
         att_queue.push(quad);
+	    
+        if(pose_timestamp_queue.size()>200){
+	    pose_timestamp_queue.pop();
+	    pos_queue.pop();
+	    att_queue.pop();
+        }
 
 
         /// Update yaw0 here, should be among [-PI, PI] 
