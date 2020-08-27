@@ -1177,12 +1177,11 @@ void positionCallback(const geometry_msgs::PoseStamped& msg)
         quad.z() = msg.pose.orientation.z;
         quad.w() = msg.pose.orientation.w;
 
-        Eigen::Quaternionf q1(0, 0, 0, 1);
-        Eigen::Quaternionf axis = quad * q1 * quad.inverse();
-        axis.w() = cos(-PI_2); //ori: PI_2/2... stupid
-        axis.x() = axis.x() * sin(-PI_2);
-        axis.y() = axis.y() * sin(-PI_2);
-        axis.z() = axis.z() * sin(-PI_2);
+        Eigen::Quaternionf axis; 
+        axis.w() = cos(-PI_2.0); //ori: PI_2/2... stupid
+        axis.x() = 0;
+        axis.y() = 0;
+        axis.z() = axis.z() * sin(-PI_2/2.0);
         quad = quad * axis;
 
         // Queue for synchronization
