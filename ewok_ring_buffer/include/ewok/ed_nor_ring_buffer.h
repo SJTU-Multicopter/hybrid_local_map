@@ -54,6 +54,11 @@ class EuclideanDistanceNormalRingBuffer
         occupancy_buffer_.insertPointCloud(cloud, origin);
     }
 
+    void removePointCloud(const PointCloud &cloud, const Vector3 &origin)  // CHG
+    {
+        occupancy_buffer_.removePointCloud(cloud, origin);
+    }
+
     void insertPointCloudDynamic(const PointCloud &cloud, const Vector3 &origin)  // CHG
     {
         occupancy_buffer_dynamic_.insertPointCloudDynamic(cloud, origin);
@@ -82,7 +87,7 @@ class EuclideanDistanceNormalRingBuffer
     }
 
     // get ringbuffer as pointcloud
-    void getBufferAsCloud(pcl::PointCloud<pcl::PointXYZRGB> &cloud, Eigen::Vector3d &center)
+    void getBufferAsCloud(pcl::PointCloud<pcl::PointXYZ> &cloud, Eigen::Vector3d &center)
     {
         // get center of ring buffer
         Vector3i c_idx = getVolumeCenter();
@@ -108,19 +113,11 @@ class EuclideanDistanceNormalRingBuffer
                     {
                         Vector3 p;
                         getPoint(coord, p);
-                        pcl::PointXYZRGB pclp;
+                        pcl::PointXYZ pclp;
                         pclp.x = p(0);
                         pclp.y = p(1);
                         pclp.z = p(2);
-                        if(p(2) < 0.2){
-                            pclp.r = 240;
-                            pclp.g = 240;
-                            pclp.b = 240;
-                        }else{
-                            pclp.r = 240;
-                            pclp.g = 10;
-                            pclp.b = 10;
-                        }
+                       
                         cloud.points.push_back(pclp);
                     }
                 }
@@ -255,34 +252,99 @@ class EuclideanDistanceNormalRingBuffer
     //     }
     // }
 
-    bool collision_checking(Eigen::Vector3f *traj_points, int Num, _Scalar threshold) {
-
+    bool collision_checking_no_fence(Eigen::Vector3f *traj_points, int Num, _Scalar threshold) {
         bool all_safe = true;
 
-        for (int i = 0; i < Num; ++i) {
+        Vector3i traj_point_idx_last;
+        Vector3 traj_point_last = traj_points[2].template cast<_Scalar>();
+        distance_buffer_.getIdx(traj_point_last, traj_point_idx_last);
+        float distance_last_point;
+        if (distance_buffer_.insideVolume(traj_point_idx_last)){
+            distance_last_point = distance_buffer_.at(traj_point_idx_last);
+        }
+
+        for (int i = 3; i < Num; i+=2) {  /// Start from the third point, check every two point
             Vector3 traj_point = traj_points[i].template cast<_Scalar>();
             Vector3i traj_point_idx;
 
-            distance_buffer_.getIdx(traj_point, traj_point_idx);  /// To modify, Should be distance_buffer_dynamic_ , CHG
-
-            // std::cout<<"point_ori=("<< traj_point(0) <<","<< traj_point(1)<<","<<traj_point(2) << ")"<<std::endl;
-            // std::cout<<"point_idx=("<< traj_point_idx(0) <<","<< traj_point_idx(1)<<","<<traj_point_idx(2) << ")"<<std::endl;
+            distance_buffer_.getIdx(traj_point, traj_point_idx);
 
             if (distance_buffer_.insideVolume(traj_point_idx)) {  //if inside
-                if (distance_buffer_.at(traj_point_idx) < threshold) {
+                float distance_this = distance_buffer_.at(traj_point_idx);
+//                std::cout << distance_this <<", ";
+                if (distance_this > threshold || distance_this >= distance_last_point) {
+                    distance_last_point = distance_this;
+                    traj_point_last = traj_point;
+                    continue;
+                }else{
+                    all_safe = false;
+                    break;
+                }
+
+            } else {
+                all_safe = false;
+//                std::cout << "not safe because out of volume" << std::endl;
+                break;
+            }
+        }
+//        std::cout << "Num=" << Num << std::endl;
+        return all_safe;
+    }
+
+    bool collision_checking_with_fence(Eigen::Vector3f *traj_points, int Num, _Scalar threshold, float max_height=120.f, float xy_max=10000.f) {
+        bool all_safe = true;
+
+        Vector3i traj_point_idx_last;
+        Vector3 traj_point_last = traj_points[2].template cast<_Scalar>();
+        distance_buffer_.getIdx(traj_point_last, traj_point_idx_last);
+        float distance_last_point;
+        if (distance_buffer_.insideVolume(traj_point_idx_last)){
+            distance_last_point = distance_buffer_.at(traj_point_idx_last);
+        }
+
+        for (int i = 3; i < Num; i+=2) {  /// Start from the third point, check every three point
+            Vector3 traj_point = traj_points[i].template cast<_Scalar>();
+            Vector3i traj_point_idx;
+
+            if(fabs(traj_point(0)) > xy_max && fabs(traj_point(0)) > fabs(traj_point_last[0])){
+                all_safe = false;
+                break;
+            }else if(fabs(traj_point(1)) > xy_max && fabs(traj_point(1)) > fabs(traj_point_last[1])){
+                all_safe = false;
+                break;
+            }else if(traj_point(2) > max_height && traj_point[2] > traj_point_last[2]){  /// Height limitation
+                all_safe = false;
+                break;
+            }else if(traj_point(2) < 0.3f){
+                all_safe = false;
+                break;
+            }
+
+            distance_buffer_.getIdx(traj_point, traj_point_idx);
+
+            if (distance_buffer_.insideVolume(traj_point_idx)) {  //if inside
+                float distance_this = distance_buffer_.at(traj_point_idx);
+//                std::cout << distance_this <<", ";
+                if (distance_this > threshold || distance_this >= distance_last_point) {
+                    distance_last_point = distance_this;
+                    traj_point_last = traj_point;
+                    continue;
+                }else{
                     all_safe = false;
                     break;
                 }
                 
             } else {
                 all_safe = false;
+//                std::cout << "not safe because out of volume" << std::endl;
                 break;
             }
         }
+//        std::cout << "Num=" << Num << std::endl;
         return all_safe;
     }
 
-    Vector3i get_rgb_edf_dynamic(float x, float y, float z) 
+    Vector3i get_rgb_edf(float x, float y, float z)
     {
         Vector3 cloud_point;
         Vector3i cloud_point_idx;

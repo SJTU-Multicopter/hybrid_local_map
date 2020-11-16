@@ -150,7 +150,43 @@ class RaycastRingBuffer {
       }
   }
 
-  void removePointCloudDynamic(const PointCloud &cloud, const Vector3 &origin) {
+    void removePointCloudDynamic(const PointCloud &cloud, const Vector3 &origin) {
+        Vector3i origin_idx; //world frame
+        occupancy_buffer_.getIdx(origin, origin_idx);
+
+        if (!occupancy_buffer_.insideVolume( //insideVolume will subtract offset and check if the seq is larger than N
+                origin_idx)) {
+            std::cout <<"Origin outside of volume. Skipping pointcloud. removePointCloudDynamic\n";
+            return;
+        }
+
+        // Iterate over all dynamic points in pointcloud and mark occupied.
+        for (const Vector4 &vec : cloud) {
+            Vector3 v = vec.template head<3>();
+            Vector3i idx;
+            occupancy_buffer_.getIdx(v, idx); //world frame, cloud should be transformed to world frame first
+
+            if (occupancy_buffer_.insideVolume(idx)) {
+              flag_buffer_.at(idx) |= free_ray_flag; // 0010
+
+                _Datatype &occupancy_data = occupancy_buffer_.at(idx);
+
+              bool was_occupied = isOccupied(occupancy_data);
+                addMissDynamic(occupancy_data);
+              bool is_occupied = isOccupied(occupancy_data);
+              flag_buffer_.at(idx) &= ~insertion_flags;
+
+              if (was_occupied != is_occupied) {
+                  flag_buffer_.at(idx) |= updated_flag;
+
+                  updated_min_ = updated_min_.array().min(idx.array());
+                  updated_max_ = updated_max_.array().max(idx.array());
+              }
+            }
+        }
+    }
+
+  void removePointCloud(const PointCloud &cloud, const Vector3 &origin) {
       Vector3i origin_idx; //world frame
       occupancy_buffer_.getIdx(origin, origin_idx);
 
@@ -159,9 +195,6 @@ class RaycastRingBuffer {
           std::cout <<"Origin outside of volume. Skipping pointcloud. removePointCloudDynamic\n";
           return;
       }
-
-      Vector3i min_idx = origin_idx; // 3 channels index
-      Vector3i max_idx = origin_idx;
 
       // Iterate over all dynamic points in pointcloud and mark occupied.
       for (const Vector4 &vec : cloud) {
@@ -177,7 +210,6 @@ class RaycastRingBuffer {
               bool was_occupied = isOccupied(occupancy_data);
               addMissDynamic(occupancy_data);
               bool is_occupied = isOccupied(occupancy_data);
-
               flag_buffer_.at(idx) &= ~insertion_flags;
 
               if (was_occupied != is_occupied) {
@@ -189,6 +221,7 @@ class RaycastRingBuffer {
           }
       }
   }
+
 
   void insertPointCloud(const PointCloud &cloud, const Vector3 &origin) {
 
