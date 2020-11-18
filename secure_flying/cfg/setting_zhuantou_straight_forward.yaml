@@ -2,41 +2,41 @@
 if_in_simulation: true
 
 # Parameters for initial goal position
-goal_position_x: 0.0
-goal_position_y: 6.0
-goal_position_z: 0.8
+goal_position_x: 60.0
+goal_position_y: 0.0
+goal_position_z: 1.0
 
 # Parameters for UAV path planning
 if_plan_vertical_path: true
 if_fallback_enable: true
 MAX_V: 0.8 # over 1 for xy combined
 MAX_A: 1.5
-DIRECTION_CHANGE_LEFT_SIZE: 1.5
+DIRECTION_CHANGE_LEFT_SIZE: 100
 HEIGHT_LIMIT: 1.8
-XY_LIMIT: 2.2
-distance_reference_length: 1.5
+XY_LIMIT: 200
+distance_reference_length: 1.8
 toward_goal_k1_xy: 2.0
 toward_goal_k1_z: 2.0
 less_variation_k2_xy: 3.0
 less_variation_k2_z: 3.5
 v_max_at_goal_ori: 0.3 #% m/s, just reference for goal velocity
 
-collision_threshold_static: 0.6
-collision_threshold_dynamic: 0.8
+collision_threshold_static: 0.5
+collision_threshold_dynamic: 1.0
 
 PLAN_INIT_STATE_CHANGE_THRESHOLD: 0.1
 
 #Parameters for head rotation planning
-k_current_v: 0.7
-k_planned_direction: 0.0
-k_v_fluctuation: 0.1
-k_dynamic_objects: 0.0
-k_common_update: 0.0
+k_current_v: 0.9
+k_planned_direction: 0.2
+k_v_fluctuation: 0.4
+k_dynamic_objects: 1.0
+k_common_update: 0.1
 
 #Parameters for tracker
 kp_xy: 0.18 #0.16
 kp_z: 0.13 #0.13
-kp_yaw: 0.8
+kp_yaw: 0.05
 p_2_delt_v_max_xy: 0.7
 p_2_delt_v_max_z: 0.4
 max_yaw_rate: 1.0  #Max xyz velocity is the same as MAX_V

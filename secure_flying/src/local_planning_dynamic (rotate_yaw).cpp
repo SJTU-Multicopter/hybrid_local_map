@@ -73,6 +73,7 @@ float XY_LIMIT = 2.5f;
 double DIRECTION_CHANGE_LEFT_SIZE = 1.5;
 
 float PLAN_INIT_STATE_CHANGE_THRESHOLD = 0.1;
+double yaw_setpoint = 0;
 
 
 struct  Path_Planning_Parameters
@@ -135,7 +136,7 @@ bool state_updating = false;
 bool safe_trajectory_avaliable = true;
 bool use_position_global_time = false;
 bool if_plan_vertical_path = true;
-bool if_sim_lee_position_controller = false;
+bool if_sim_lee_position_controller = true;
 bool if_fallback_enable = true;
 
 hist_kalman_mot::ObjectsInTracking dynamic_objects;
@@ -1006,7 +1007,8 @@ void trajectoryCallback(const ros::TimerEvent& e) {
         }
 
         /** End of visualization **/
-        sendMotorCommands(yaw_to_send); //send to motor
+        sendMotorCommands(0.0); //send to motor
+        yaw_setpoint = yaw_to_send;
 
         last_head_yaw_plan = yaw_to_send;
     }
@@ -1022,21 +1024,35 @@ void setPointSendCallback(){
     if(safe_trajectory_avaliable){
         pp.d_ref = def_ori;
 
-        int buffer_send_counter_v = 0;  // To eliminate the influence of delay
-        int buffer_send_counter_p = 0;
+        int buffer_send_counter_v = 1;  // To eliminate the influence of delay
+        int buffer_send_counter_p = 1;
+
+        if(if_sim_lee_position_controller && if_in_simulation){
+            buffer_send_counter_v = 2;
+            buffer_send_counter_p = 2;
+        }
 
         float z_set;
         if(if_plan_vertical_path) z_set = send_traj_buffer_p[buffer_send_counter_p](2);
         else z_set = p_goal(2);
 
-        trackVelocityPose(send_traj_buffer_v[buffer_send_counter_v](0), send_traj_buffer_v[buffer_send_counter_v](1),
-                          send_traj_buffer_v[buffer_send_counter_v](2), 0.f, send_traj_buffer_p[buffer_send_counter_p](0),
-                          send_traj_buffer_p[buffer_send_counter_p](1), z_set, yaw_init);
+        if(if_sim_lee_position_controller && if_in_simulation){
+            simTrackPose(send_traj_buffer_p[buffer_send_counter_p](0), send_traj_buffer_p[buffer_send_counter_p](1), z_set, yaw_setpoint);
+        } else{
+            trackVelocityPose(send_traj_buffer_v[buffer_send_counter_v](0), send_traj_buffer_v[buffer_send_counter_v](1),
+                              send_traj_buffer_v[buffer_send_counter_v](2), 0.f, send_traj_buffer_p[buffer_send_counter_p](0),
+                              send_traj_buffer_p[buffer_send_counter_p](1), z_set, yaw_setpoint);
+        }
+
         p_store_for_em << p0(0), p0(1), p0(2);
 
     }else{  //emergency stop
         pp.d_ref = 0.5;
-        trackVelocityPose(0.f, 0.f, 0.f, 0.f, p_store_for_em(0), p_store_for_em(1), p_store_for_em(2), yaw_init);
+        if(if_sim_lee_position_controller && if_in_simulation) {
+            simTrackPose(p_store_for_em(0), p_store_for_em(1), 1.0, yaw_setpoint);
+        }else{
+            trackVelocityPose(0.f, 0.f, 0.f, 0.f, p_store_for_em(0), p_store_for_em(1), p_store_for_em(2), yaw_setpoint);
+        }
     }
 }
 
@@ -1152,6 +1168,8 @@ void randomGoalGenerate()
     ROS_WARN("New Goal = (%f, %f, %f)", p_goal(0), p_goal(1), p_goal(2));
 
     static int goal_generated_times = 0;
+    ROS_ERROR("goal_generated_times=%d", goal_generated_times);
+
     goal_generated_times ++;
     if(goal_generated_times > 10){
         for(int i=0; i<100; i++){
@@ -1183,7 +1201,7 @@ void simPositionVelocityCallback(const nav_msgs::Odometry &msg)
         /// Update yaw0 here, should be among [-PI, PI] 
         yaw0 = atan2(2*(quad.w()*quad.z()+quad.x()*quad.y()), 1-2*(quad.z()*quad.z()+quad.y()*quad.y()));
 
-        //ROS_INFO("Current yaw = %f", yaw0);
+        ROS_INFO_THROTTLE(2, "Current yaw = %f", yaw0);
 
         /*** velocity ***/
         /** NWU**/
@@ -1230,7 +1248,7 @@ void simPositionVelocityCallback(const nav_msgs::Odometry &msg)
     static bool flight_started = false;
     static long long int counter_times = 0;
     static double started_time;
-    if(p0(1) < -1.f && !flight_started){
+    if(p0(1) > 1.f && !flight_started){
         flight_started = true;
         started_time = ros::Time::now().toSec();
     }
@@ -1346,7 +1364,7 @@ void limit_to_max(float &x, float x_max)
 }
 
 void trackVelocityPose(float vx_sp, float vy_sp, float vz_sp, float yaw_rate_sp,
-                    float px_sp_last, float py_sp_last, float pz_sp_last, float yaw_sp_last)
+                    float px_sp_last, float py_sp_last, float pz_sp_last, float yaw_sp)
 {
     geometry_msgs::TwistStamped cmd_to_pub;
     /*Simple tracker*/
@@ -1372,8 +1390,8 @@ void trackVelocityPose(float vx_sp, float vy_sp, float vz_sp, float yaw_rate_sp,
     vx_sp += delt_px_to_vx;
     vy_sp += delt_py_to_vy;
     vz_sp += delt_pz_to_vz;
-    if(fabs(yaw_sp_last - yaw0) > 0.1) {
-        yaw_rate_sp += (yaw_sp_last - yaw0) / time_interval * kp_yaw;
+    if(fabs(yaw_sp - yaw0) > 0.001) {
+        yaw_rate_sp += (yaw_sp - yaw0) * kp_yaw;
     }
 
     if(fabs(vz_sp) < 0.05) vz_sp = 0.f;  //dead zone for vz
@@ -1556,7 +1574,6 @@ int main(int argc, char** argv)
         sync_ = new message_filters::Synchronizer<mapSyncPolicy>(mapSyncPolicy(10), *motor_sub, *cloud_sub);
         sync_->registerCallback(boost::bind(&cloudCallback, _1, _2));
 
-
         head_cmd_pub = nh.advertise<geometry_msgs::Point32>("/gimbal_commands", 2, true); 
         cmd_vel_pub = nh.advertise<geometry_msgs::TwistStamped>("/mavros/setpoint_velocity/cmd_vel", 2, true); 
     }else{
@@ -1574,7 +1591,6 @@ int main(int argc, char** argv)
         message_filters::Synchronizer<mapSyncPolicy>* sync_;
         sync_ = new message_filters::Synchronizer<mapSyncPolicy>(mapSyncPolicy(10), *motor_sub, *cloud_sub);
         sync_->registerCallback(boost::bind(&cloudCallback, _1, _2));
-
 
         head_cmd_pub = nh.advertise<std_msgs::Float64>("/iris/joint1_position_controller/command", 2, true);
         if(if_sim_lee_position_controller){

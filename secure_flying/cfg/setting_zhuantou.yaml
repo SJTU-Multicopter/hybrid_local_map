@@ -36,7 +36,7 @@ k_common_update: 0.1
 #Parameters for tracker
 kp_xy: 0.18 #0.16
 kp_z: 0.13 #0.13
-kp_yaw: 0.05
+kp_yaw: 0.8
 p_2_delt_v_max_xy: 0.7
 p_2_delt_v_max_z: 0.4
 max_yaw_rate: 1.0  #Max xyz velocity is the same as MAX_V
